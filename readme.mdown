@@ -1,0 +1,10 @@
+
+# Weaver on Lua
+
+A prototype implementation of the Weaver engine on Lua, using Pluto for persistence. 
+
+Unfortunately, this project is blocked by a critical bug - Pluto 2.4.1 doesn't persist suspended coroutines on OS X (Snow Leopard), even with Lua 5.1.3.
+
+
+Check out kernel/kernel.lua to understand how coroutines are used to make asynchronous waits synchronous.
+
