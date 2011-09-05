@@ -1,0 +1,10 @@
+Lua 5.1.3 (not 5.1.4 or later)
+
+Download http://www.lua.org/ftp/lua-5.1.3.tar.gz
+In the extracted folder, run `sudo make macosx install`
+
+
+Pluto 2.4
+luafilesystem 1.5.0-2> sudo luarocks install luafilesystem
+rings> sudo luarocks install rings
+pluto 2.4-1>sudo luarocks install pluto
