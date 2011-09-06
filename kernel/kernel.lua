@@ -60,6 +60,9 @@ function resume(id, response)
 		end
 	end 
 	
+	--print(table.show(get_persist_perms(), "persist_perms"))
+	--print(table.show(get_unpersist_perms(), "unpersist_perms"))
+	
 	-- Load the current code state (coroutine)
 	-- This also includes the coroutine object
 	local code = load_and_parse(get_user_data_path(id, "code"), get_default_code_state())
@@ -90,9 +93,10 @@ end
 function run_code_until_new_response_needed(code, inflow)
 	local success, outflow
 	local waiting_on_user = false
+	local last_error = nil
   repeat
 	
-		print(table.show(code, "code"))
+		--print(table.show(code, "code"))
 		success, outflow = coroutine.resume(code.co, inflow)
 		
 		-- Handle code failures
@@ -106,15 +110,24 @@ function run_code_until_new_response_needed(code, inflow)
 			inflow.response = nil
 		else 
 			if coroutine.status(code.co) == 'dead' and (outflow == nil or outflow.type ~= 'goto') then
-				print ("Module "..code.name.." ended unexpectedly with result " .. outflow)
-				-- Handle dead modules who haven't specified a succesor by... restarting them?
-				code = build_coroutine(code.name)
-				-- Strip user response, ignore whatever state changes might have happend
-				inflow.response = nil
+				if code.name == last_error then
+					-- It's happened twice, restart game
+					code = get_default_code_state()
+					-- Strip user response, ignore whatever state changes might have happend
+					inflow.response = nil
+				else
+				
+					print ("Module "..code.name.." ended unexpectedly with result " .. outflow)
+					-- Handle dead modules who haven't specified a succesor by... restarting them?
+					code = build_coroutine(code.name)-- TODO: Handle (rare) missing module exception.
+					-- Strip user response, ignore whatever state changes might have happend
+					inflow.response = nil
+					last_error = code.name
+				end
 			-- Handle success
 			else 
 				if outflow.type == 'goto' then
-					code = build_coroutine(outflow.name)
+					code = build_coroutine(outflow.name) -- TODO: Handle missing module exception.
 				else if outflow.type == 'prompt' then
 					waiting_on_user = true
 				end
@@ -132,15 +145,51 @@ end
 
 
 function get_globals()
-	return {pairs = pairs, coroutine = {yield=coroutine.yield}} -- sandbox_env
+	local globs =  deepcopy(sandbox_env) -- {pairs = pairs,print = print, type=type, coroutine = {yield=coroutine.yield}} -- sandbox_env
+	globs["_G"] = globs
+	return globs
 end
 
 function get_persist_perms()
-	return {[coroutine.yield] = 1, [pairs] = 2}
+	return invert(flatten_to_array(sandbox_env, persistable))
 end
 
 function get_unpersist_perms()
-	return {[1] = coroutine.yield, [2] = pairs}
+	return flatten_to_array(sandbox_env, persistable)
+end
+
+function invert(tab)
+	local t = {}
+	for k,v in pairs(tab) do
+		t[v] = k
+	end
+	return t
+end
+
+function flatten_to_array(tab, excluded_values)
+	local arr = {}
+	for k,v in pairs(tab) do
+		
+		if (type(v) == 'table' ) then
+			-- No immediate cyclic refs, like _G. 
+			if (v ~= tab) then
+				local child = flatten_to_array(v,excluded_values)
+				for _,cv in ipairs(child) do
+					if excluded_values[cv] == nil then
+						table.insert(arr,cv)
+					end
+				end
+			end
+		else
+			if excluded_values[v] == nil then
+				if (type(v) ~= 'function') then
+					print("Found value " .. v .. " when flatting to array")
+				end
+				table.insert(arr,v)
+			end
+		end
+	end
+	return arr;
 end
 
 function getcoderoot()
@@ -188,7 +237,7 @@ function build_coroutine(name)
 	local filename = coderoot .. getslash() .. name:gsub("%.([^%.]-)$","",1):gsub("%.",getslash()) .. ".lua"
 	local _,_,funcname = name:find("%.([^%.]+)$")
 	
-	local env  = get_globals() -- TODO, clone this to prevent injection
+	local env  = get_globals() 
 	print (env)
 	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env)
 	local mod = load_in(filename,env)
@@ -213,10 +262,11 @@ sandbox_env = {
   tonumber = tonumber,
   tostring = tostring,
   type = type,
+	print = print,
   unpack = unpack,
   coroutine = { create = coroutine.create, resume = coroutine.resume, 
       running = coroutine.running, status = coroutine.status, 
-      wrap = coroutine.wrap },
+      wrap = coroutine.wrap, yield = coroutine.yield },
   string = { byte = string.byte, char = string.char, find = string.find, 
       format = string.format, gmatch = string.gmatch, gsub = string.gsub, 
       len = string.len, lower = string.lower, match = string.match, 
@@ -233,5 +283,31 @@ sandbox_env = {
       rad = math.rad, random = math.random, sin = math.sin, sinh = math.sinh, 
       sqrt = math.sqrt, tan = math.tan, tanh = math.tanh },
   os = { clock = os.clock, difftime = os.difftime, time = os.time },
+debug = {getlocal = debug.getlocal} -- REMOVE THIS
 }
+
+
+persistable = {[math.pi] = math.pi, [math.huge] = math.huge}
+
+--This function returns a deep copy of a given table. The function below also copies the metatable to the new table 
+-- if there is one, so the behaviour of the copied table is the same as the original. But the 2 tables share the 
+-- same metatable, you can avoid this by changing this 'getmetatable(object)' to '_copy( getmetatable(object) )'.
+function deepcopy(object)
+    local lookup_table = {}
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object
+        elseif lookup_table[object] then
+            return lookup_table[object]
+        end
+        local new_table = {}
+        lookup_table[object] = new_table
+        for index, value in pairs(object) do
+            new_table[_copy(index)] = _copy(value)
+        end
+        return setmetatable(new_table, getmetatable(object))
+    end
+    return _copy(object)
+end
+
 main()

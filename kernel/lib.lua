@@ -9,6 +9,60 @@ function update(inflow)
 	return inflow
 end
 
+-- Can't do it this way:
+function make_table_implicit(table)
+	setmetatable(table, {
+	      __newindex = function (op, k, v)
+						rawset(op,k,v)
+	      end,
+	      __index = function (op, k)
+						local t = {}
+						rawset(op,k,t)
+						return t
+	      end,
+	    })
+	
+		
+			
+end
+
+function var( name,defaultValue)
+	local tab = _G
+	print ("Initializing var " .. name)
+	while name:find("%.") ~= nil do
+		local _,_,part = name:find("^([^%.]*)%.")
+		name = name:gsub("^([^%.]*)%.","")
+		if (tab[part] == nil) then 
+			tab[part] = {}
+		end
+		tab = tab[part]
+		print (part)
+	end
+	if (tab[name] == nil) then
+		tab[name] = defaultValue;
+	end
+end
+
+function printlocals()
+	print(table.show(locals(3),"locals"))
+end
+	
+	function locals(level)
+		if (level == nil) then level = 2 end
+	  local variables = {}
+	  local idx = 1
+	  while true do
+	    local ln, lv = debug.getlocal(level, idx)
+	    if ln ~= nil then
+	      variables[ln] = lv
+	    else
+	      break
+	    end
+	    idx = 1 + idx
+	  end
+	  return variables
+	end
+
 function roundtrip(type,name)
 	return update(coroutine.yield(outflow(type,name)))
 end
@@ -33,7 +87,7 @@ function choose(message, options)
 		local inflow = roundtrip('prompt')
 		answer = inflow.response
 	until answer ~= nil
-	print ("You pressed " .. answer)
+	p ("You pressed " .. answer)
 	local dest = shortcuts[answer]
 	if type(dest) == 'string' then
 		roundtrip('goto',dest)
@@ -41,6 +95,7 @@ function choose(message, options)
 		dest()
 	end
 end
+
 
 
 -- Ends the currently executing module, and starts the newly specified one
@@ -100,16 +155,20 @@ function table.show(t, name, indent)
    local function basicSerialize (o)
       local so = tostring(o)
       if type(o) == "function" then
-         local info = debug.getinfo(o, "S")
-         -- info.name is nil because o is not a calling level
-         if info.what == "C" then
-            return string.format("%q", so .. ", C function")
-         else 
-            -- the information is defined through lines
-            return string.format("%q", so .. ", defined in (" ..
-                info.linedefined .. "-" .. info.lastlinedefined ..
-                ")" .. info.source)
-         end
+				 if (debug == nil or debug.getinfo == nil) then
+					return string.format("%q", so)
+				 else
+	         local info = debug.getinfo(o, "S")
+	         -- info.name is nil because o is not a calling level
+	         if info.what == "C" then
+	            return string.format("%q", so .. ", C function")
+	         else 
+	            -- the information is defined through lines
+	            return string.format("%q", so .. ", defined in (" ..
+	                info.linedefined .. "-" .. info.lastlinedefined ..
+	                ")" .. info.source)
+	         end
+				end
       elseif type(o) == "number" or type(o) == "boolean" then
          return so
       else
