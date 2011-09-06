@@ -18,7 +18,7 @@ function play(web, id)
 end
 
 
-function layout(web, args, inner_html, choices_html)
+function layout(web, args, inner_html, choices_html,log)
    return html{
       head{
      title{app_title},
@@ -35,6 +35,7 @@ function layout(web, args, inner_html, choices_html)
         },  
         div{ class = "contents", inner_html },
 				div{ class = "choices", choices_html },
+				pre{ class = "log", log },
         div{ class = "footer", copyright_notice }
      }
       }
@@ -47,8 +48,9 @@ end
 function write_choices(choices)
 	if (choices == nil) then return "" end
 	local inputs = {}
-	for k,v in pairs(choices) do
-		inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v, value=k}
+	for _,v in pairs(choices) do
+		inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v.id, value=v.text}
+		-- todo add support for v.shortcut via javascript
 	end
 	return form{
 		method = "post",
@@ -60,12 +62,17 @@ end
 
 function resume_game(web, args)
 	
+	local log = ""
 	
-	display = resume("ndj",args.response)
+	local function err(message)
+		log = log .. message .. "\n"
+	end
+	
+	display = resume("ndj",args.response,err)
 	
 	
 	
-	return layout(web,args, markdown(display.out), write_choices(display.menu))
+	return layout(web,args, markdown(display.out), write_choices(display.menu), log)
 
 end
 

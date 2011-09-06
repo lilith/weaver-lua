@@ -14,3 +14,4 @@ pluto 2.4-1>sudo luarocks install pluto
 
 
 markdown .32-2> sudo luarocks install markdown
+sha2 .2.0-1> sudo luarocks install sha2    http://code.google.com/p/sha2/

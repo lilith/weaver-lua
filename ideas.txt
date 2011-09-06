@@ -1,0 +1,2 @@
+Allow a function to be marked as resumable - it saves its own continuation. It should always be called via goto(), never directly from another function.
+

@@ -1,15 +1,59 @@
-function center(inflow)
-	update(inflow)
+center_ = "Go to the Town Center (c)"
+function center()
   p "You are standing in the center of a busy town. Smells of rotten fruit attack your nostrils."
-  var("user.town.center.visits",0)
-printlocals()
-
-	user.town.center.visits = user.town.center.visits + 1
-	p ("You have been here " .. user.town.center.visits .. " times.")
-	menu = {
-		["Go to the Town center (t)"] =  "world.town.center",
-		["Go to the Forest (f)"] = "world.forest.entrance"
- 	}
-	choose("Where would you like to go?", menu)
+ 	
+	p ("You have been here " .. inc("user.town.center.visits",1) .. " times.")
+	
+	choose({
+		"market", 
+		"home", 
+		"world.forest.entrance"
+ 	})
 	
 end
+
+market_ = "Go to the market (m)"
+function market()
+	
+	p "You are standing in the center of a busy market."
+	
+	choose({
+		"center",
+		"home"
+ 	})
+end
+
+home_ = "Go to your home (h)"
+function home()
+	
+	p"you can see your little old wood house standing at the gate, you walk towards the door, turn the key in the lock and step in."
+	
+	p("you have been here"..inc("user.home.visit",1).."times")
+	
+	choose({
+		"bedroom",
+		"kitchen",
+		"center"
+	})
+end
+
+function bedroom()
+	
+	p"you open the door and you realize something feels wrong"
+	
+	choose({
+		"center",
+		["Go back to the hallway"] = "home",
+		"kitchen",
+		["check your cash stash under your pillow"]= function()
+		if (not get_var("user.home.cash", false)) then
+			p"You don't find your cash anywhere."
+		else
+			p"You find your cash, but you look around, and see that you lamp is broken."
+		end
+	end
+	})
+end
+	
+	-- TODO: Add clear(), yesno(), 
+	

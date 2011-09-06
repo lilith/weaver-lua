@@ -1,7 +1,7 @@
 
 display={out=""}
 
-function update(inflow)
+function state_update(inflow)
 	-- Display value is only passed in on occasion - if it's missing, we just use the copy we have.
 	if inflow.display ~= nil then display = inflow.display end 
 	user = inflow.user
@@ -9,38 +9,54 @@ function update(inflow)
 	return inflow
 end
 
--- Can't do it this way:
-function make_table_implicit(table)
-	setmetatable(table, {
-	      __newindex = function (op, k, v)
-						rawset(op,k,v)
-	      end,
-	      __index = function (op, k)
-						local t = {}
-						rawset(op,k,t)
-						return t
-	      end,
-	    })
-	
-		
-			
+
+function define_var( name,defaultValue)
+	local tab = get_parent_of_var(name, true)
+	if (tab[name] == nil) then
+		tab[name] = defaultValue;
+	end
 end
 
-function var( name,defaultValue)
+
+function get_parent_of_var(name, create_missing_levels)
 	local tab = _G
-	print ("Initializing var " .. name)
 	while name:find("%.") ~= nil do
 		local _,_,part = name:find("^([^%.]*)%.")
 		name = name:gsub("^([^%.]*)%.","")
 		if (tab[part] == nil) then 
-			tab[part] = {}
+			if create_missing_levels then
+				tab[part] = {}
+			else
+				return nil
+			end
 		end
 		tab = tab[part]
-		print (part)
 	end
-	if (tab[name] == nil) then
-		tab[name] = defaultValue;
-	end
+	return tab
+end
+
+function short_hash(text)
+	return sha2.sha256hex(text):sub(0,8)
+end
+
+function get_var( name,defaultValue)
+	local tab = get_parent_of_var(name, false)
+	if (tab == nil) then return defaultValue end
+	local val = tab[name]
+	if (val == nil) then return defaultValue end
+	return val
+end
+
+function set_var( name,value)
+	local tab = get_parent_of_var(name, true)
+	tab[name] = value;
+	return value
+end
+
+function inc(name, offset, defaultValue)
+	if offset == nil then offset = 1 end
+	if defaultValue == nil then defaultValue = 0 end
+	return set_var(name, get_var(name,defaultValue) + offset)
 end
 
 function printlocals()
@@ -64,38 +80,55 @@ end
 	end
 
 function roundtrip(type,name)
-	return update(coroutine.yield(outflow(type,name)))
+	return state_update(coroutine.yield(outflow(type,name)))
 end
 function outflow(type, name)
 	return {display=display,user=user,world=world, type=type, name=name}
+end
+
+function lookup_external_var(name)
+	return roundtrip("getvar",name).getvar
 end
 
 function p (message)
 	display.out = display.out .. '\n' .. message
 end
 
-function add_option(text, key)
+function add_option(text, id, shortcut)
 	if (display.menu == nil) then
 		display.menu = {}
 	end
-	display.menu[key] = text
+	display.menu[#display.menu + 1] = {text = text, shortcut= shortcut, id=id}
 end
 
-function choose(message, options)
-	p (message)
-	local shortcuts = {}
+function choose(options)
+	-- Build a dict keyed on both caption hashes and shortcut keys
+	local by_id_or_s = {}
 	for key,value in pairs(options) do
+		-- Allow shortcuts (non-pairs)
+		if (type(key) == 'number') then
+			key = _G[value .. "_"] --Try to lookup the place_ variable, first locally
+			-- Then in a remote file, if a . is in the name
+			if (key == nil and value:find("%.") ~= nil) then 
+				key = lookup_external_var(value .. "_")
+			end
+			-- Fallback to autonaming
+			if (key == nil) then key = "Go to " .. value end
+		end
 		_,_,shortcut = key:find("%((%l)%)")
-		shortcuts[shortcut] = value
-		add_option(shortcut,key)
+		if shortcut ~= nil then  by_id_or_s[shortcut] = value end
+		local id = short_hash(key)
+		by_id_or_s[id] = value
+		add_option(key, id, shortcut)
 	end
+	-- Allow either the shortcut key or the hash to be used
 	local answer
 	repeat
 		local inflow = roundtrip('prompt')
 		answer = inflow.response
 	until answer ~= nil
-	p ("You pressed " .. answer)
-	local dest = shortcuts[answer]
+	print ("You pressed " .. answer)
+	local dest = by_id_or_s[answer]
 	if type(dest) == 'string' then
 		roundtrip('goto',dest)
 	else
@@ -103,6 +136,61 @@ function choose(message, options)
 	end
 end
 
+function message(text, button_text)
+	display.out = text
+	display.menu = {text=button_text, shortcut='c', id='continue'}
+	roundtrip('prompt')
+end
+
+-- Returns a value between 0 and 1
+function random_number()
+	math.randomseed( tonumber(tostring(os.time()):reverse():sub(1,6)) )
+	return math.random()
+end
+
+
+function random_chance_of(zerotoone)
+	return random_number() < zerotoone
+end
+
+-- Randomly executes one of the specified actions (if functions). If a string is specified, it is assumed to be text.
+-- Weights can be provided for any item, simply add a number before it.  In {action1, action2, 4, action5}, action5 will have a 4 times large probabibility of being selected.
+function do_random(actions)
+	-- Calculate the weights for each action, the sum of all weights
+  -- And build a new array of weight/action pairs
+	local weight = 1
+	local weight_sum = 0
+	local new_table = {}
+	local v
+	for _, v in ipairs(actions) do
+		if type(v) == 'number' then
+			weight = v
+		else
+			table.insert(new_table, {weight=weight, action = v})
+			weight_sum = weight_sum + weight
+			weight = 1
+		end
+	end
+
+	
+	local random_value = random_number() * weight_sum
+	-- Go through the actions looking for the action corresponding to the random value
+	local previous_weight = 0
+	for _, v in ipairs(new_table) do
+		if (random_value >= previous_weight and random_value <= previous_weight + v.weight) then
+			local act = v.action
+			if type(act) == 'string' then
+				p(act)
+			else if type(act) == 'function' then
+					act()
+				else
+					--TODO: throw an error?
+				end
+			end
+		end 
+	end
+	-- TODO: Throw an error
+end
 
 
 -- Ends the currently executing module, and starts the newly specified one

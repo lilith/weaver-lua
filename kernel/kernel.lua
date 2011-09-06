@@ -1,9 +1,10 @@
 require "lfs"
 require "pluto"
 require "lib"
+require "sha2"
 
-
-function get_default_code_state()
+function get_default_code_state(err)
+	if (err == nil) then err = print end
 	return build_coroutine("world.start.start")
 end
 
@@ -48,8 +49,10 @@ function load_and_parse(path, default_data)
 	end
 	return data
 end
+
+
 -- Returns a display state object
-function resume(id, response)
+function resume(id, response,err)
 	
 	-- If there is no response from the user, we don't need to resume any code, just return the current response. 
 	if (response == nil) then
@@ -72,68 +75,79 @@ function resume(id, response)
 	
 	-- Resume the code state
 	local outflow
-	code, outflow = run_code_until_new_response_needed(code,{response = response, world=world_state, user=user_state})
+	code, outflow = run_code_until_new_response_needed(code,{response = response, world=world_state, user=user_state},err)
 	
-	print "Persisting data"
+--[[	print "Persisting data"
 	print(table.show(code, "code"))
 	print(table.show(outflow.display, "display"))
 	print(table.show(outflow.user, "user"))
 	print(table.show(outflow.world, "world"))
-	
+		]]--
 	-- Save code and resulting state
 	write_file(get_user_data_path(id, "code"), pluto.persist(get_persist_perms(),code))
 	write_file(get_user_data_path(id, "display"), pluto.persist(get_persist_perms(),outflow.display))
 	write_file(get_user_data_path(id, "state"), pluto.persist(get_persist_perms(),outflow.user))
 	write_file(get_world_data_path( "state"), pluto.persist(get_persist_perms(),outflow.world))
-			
+		
 	-- Return new display object
 	return outflow.display
 end 
 
-function run_code_until_new_response_needed(code, inflow)
+function run_code_until_new_response_needed(code, inflow, err)
 	local success, outflow
 	local waiting_on_user = false
 	local last_error = nil
+	local original_code = code
   repeat
 	
 		--print(table.show(code, "code"))
 		success, outflow = coroutine.resume(code.co, inflow)
 		
-		-- Handle code failures
-		if sucess == false then 
-			print ("Failed to exeucte")
-			print(outflow)
-			print ("starting over")
+		local failed = false
+		if success == false then failed = true end -- Never started
+		if coroutine.status(code.co) == 'dead' and (outflow == nil or outflow.type ~= 'goto') then failed = true end -- Runtime errors or function ended
+		
+		if failed then
+			if (success == true and outflow == nil) then
+				err ("Module " .. code.name .. " seems to be incomplete. Remember to provide the user with choices, and make sure all those choices actually do something or go somewhere.")
+			end
+			if (outflow ~= nil) then outflow = " with result:\n " .. outflow .."\n" else outflow = "" end
+			
+			
+			err ("Module "..code.name.." ended unexpectedly" ..  outflow)
+			err ("Starting over at safe point")
 			-- Go to a safe point in the game
 			code = get_default_code_state()
-			-- Strip user response, ignore whatever state changes might have happend
+			-- Strip user response, and also ignore whatever state changes might have happened by not copying outflow
 			inflow.response = nil
-		else 
-			if coroutine.status(code.co) == 'dead' and (outflow == nil or outflow.type ~= 'goto') then
-				if code.name == last_error then
-					-- It's happened twice, restart game
-					code = get_default_code_state()
-					-- Strip user response, ignore whatever state changes might have happend
-					inflow.response = nil
-				else
-				
-					print ("Module "..code.name.." ended unexpectedly with result " .. outflow)
-					-- Handle dead modules who haven't specified a succesor by... restarting them?
-					code = build_coroutine(code.name)-- TODO: Handle (rare) missing module exception.
-					-- Strip user response, ignore whatever state changes might have happend
-					inflow.response = nil
-					last_error = code.name
-				end
-			-- Handle success
-			else 
-				if outflow.type == 'goto' then
-					code = build_coroutine(outflow.name) -- TODO: Handle missing module exception.
-				else if outflow.type == 'prompt' then
-					waiting_on_user = true
-				end
-				-- We need to move outflow state into inflow state for the next round
-				inflow = {args=outflow.args, world=outflow.world, user=outflow.user, display = outflow.display}
 			
+			--TODO: add support for looping functions.
+			-- Handle success
+		else 
+			if outflow.type == 'goto' then
+				-- If the new name doesn't have a '.', assume it is in the same file as the last code run.
+				local new_name = outflow.name
+				if (new_name:match("^[^%.]+$") ~= nil) then
+					new_name = get_parent_namespace(code.name).. "." .. outflow.name
+				end
+				local new_code = build_coroutine(new_name,err) 
+				if new_code ~= nil then
+					code = new_code
+				else
+					err("Failed to locate " .. new_name .. ", falling back to " .. code.name)
+					code = build_coroutine(code.name,err) --Could fail if code is edited
+				end
+			else if outflow.type == 'prompt' then
+				waiting_on_user = true
+			end 
+			-- We need to move outflow state into inflow state for the next round
+			inflow = {args=outflow.args, world=outflow.world, user=outflow.user, display = outflow.display}
+			
+			-- Sending vars
+			if outflow.type == 'getvar' then
+				inflow.getvar = get_var_from_file(outflow.name,function(message)
+					err("Non-fatal: " .. message)
+				end)
 			end
 		end
 	end
@@ -141,6 +155,10 @@ function run_code_until_new_response_needed(code, inflow)
 	until waiting_on_user
 	
 	return code, outflow
+end
+
+function get_parent_namespace(name)
+	return name:gsub("%.[^%.]+$","",1)
 end
 
 
@@ -203,7 +221,7 @@ function main()
 	
 	local display, response = nil
 	repeat 
-		display = resume("ndj",response)
+		display = resume("ndj",response, print)
 		print (display.out)
 		print( "-")
 		if (display.menu ~= nil) then
@@ -222,19 +240,37 @@ function getslash()
 end
 
 
-function load_in(path, env)
+function load_in(path, env, err)
 	local func, message = loadfile(path)
 	if (func == nil) then
-		print ("Failed to load " .. path)
-		print (message)
+		err ("Failed to load " .. path)
+		err (message)
+		err ("")
 	else
 		setfenv(func,env)
 	end
 	return func
 end
 
+function get_var_from_file(name, err)
+	local coderoot = getcoderoot()
+	-- Strip last 
+	local filename = coderoot .. getslash() .. name:gsub("%.([^%.]-)$","",1):gsub("%.",getslash()) .. ".lua"
+	local _,_,membername = name:find("%.([^%.]+)$")
+	
+	local env  = get_globals() 
+	print (env)
+	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
+	if (lib == nil) then return nil end
+	local mod = load_in(filename,env,err)
+	if (mod == nil) then return nil end
+	pcall(lib)
+	-- Todo, add hook calls here
+	pcall(mod)
+	return env[membername]
+end
 
-function build_coroutine(name)
+function build_coroutine(name,err)
 	-- Load based on string name 
 	-- load
 	-- loadstring
@@ -247,16 +283,24 @@ function build_coroutine(name)
 	
 	local env  = get_globals() 
 	print (env)
-	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env)
-	local mod = load_in(filename,env)
+	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
+	if (lib == nil) then return nil end
+	local mod = load_in(filename,env,err)
+	if (mod == nil) then return nil end
 	pcall(lib)
 	-- Todo, add hook calls here
 	pcall(mod)
 	local initial_func = env[funcname]
 	if (initial_func == nil) then
-		print ("Couldn't find function " .. funcname .. " in " .. filename)
+		err ("Couldn't find function " .. funcname .. " in " .. filename)
+		return nil
 	end
-	local code = coroutine.create(initial_func)
+	local func_wrapper = function(inflow)
+		state_update(inflow)
+		initial_func()
+	end
+	setfenv(func_wrapper,env)
+	local code = coroutine.create(func_wrapper)
 	-- Save the name so they can be recreated
 	return {co=code,name=name}
 end
@@ -272,6 +316,7 @@ sandbox_env = {
   type = type,
 	print = print,
   unpack = unpack,
+	sha2 = {sha256hex = sha2.sha256hex},
   coroutine = { create = coroutine.create, resume = coroutine.resume, 
       running = coroutine.running, status = coroutine.status, 
       wrap = coroutine.wrap, yield = coroutine.yield },
