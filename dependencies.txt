@@ -1,10 +1,16 @@
-Lua 5.1.3 (not 5.1.4 or later)
+Lua 5.1.4
 
-Download http://www.lua.org/ftp/lua-5.1.3.tar.gz
+Download http://www.lua.org/ftp/lua-5.1.4.tar.gz
 In the extracted folder, run `sudo make macosx install`
+
+
+wsapi-xavante 1.5-1> sudo luarocks install wsapi-xavante
 
 
 Pluto 2.4
 luafilesystem 1.5.0-2> sudo luarocks install luafilesystem
 rings> sudo luarocks install rings
 pluto 2.4-1>sudo luarocks install pluto
+
+
+markdown .32-2> sudo luarocks install markdown

@@ -74,13 +74,20 @@ function p (message)
 	display.out = display.out .. '\n' .. message
 end
 
+function add_option(text, key)
+	if (display.menu == nil) then
+		display.menu = {}
+	end
+	display.menu[key] = text
+end
+
 function choose(message, options)
 	p (message)
 	local shortcuts = {}
 	for key,value in pairs(options) do
-		p(key)
 		_,_,shortcut = key:find("%((%l)%)")
 		shortcuts[shortcut] = value
+		add_option(shortcut,key)
 	end
 	local answer
 	repeat

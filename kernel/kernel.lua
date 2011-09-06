@@ -195,6 +195,8 @@ end
 function getcoderoot()
 	return get_parent_dir(lfs.currentdir())  
 end
+
+
 function main()
 	-- Default to the current dir
 	print (getcoderoot())
@@ -203,6 +205,12 @@ function main()
 	repeat 
 		display = resume("ndj",response)
 		print (display.out)
+		print( "-")
+		if (display.menu ~= nil) then
+			for k,v in pairs(display.menu) do
+				print (v)
+			end
+		end
 		print (">")
 		response = io.read()
 	until response == "q"
@@ -310,4 +318,15 @@ function deepcopy(object)
     return _copy(object)
 end
 
-main()
+function clear_all_data()
+	local function get_parent_dir(path)
+		return path:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
+	end
+
+	local path = get_parent_dir(lfs.currentdir())   .."/"
+
+	os.remove (path.. "world-data/state.bin")
+	os.remove (path.. "users/ndj/code.bin")
+	os.remove (path.. "users/ndj/display.bin")
+	os.remove (path.. "users/ndj/state.bin")
+end
