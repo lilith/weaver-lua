@@ -1,16 +1,86 @@
 
 # Weaver on Lua
 
-A prototype implementation of the Weaver engine on Lua, using Pluto for persistence. 
+A prototype implementation of the Weaver engine on Lua, using Pluto for persistence. Allows async games to be scripted in a human-readable manner, without callbacks. Just simple function calls, if statements, and choice statements. See kernel/kernel.lua for the engine core.
 
+* [How to install the Weaver Engine](install.mdown)
+* [TODO list](todo.mdown)
 
-Check out kernel/kernel.lua to understand how coroutines are used to make asynchronous waits synchronous.
+### Current servers
+
+* eu.weaverengine.com (Ireland): `ssh -i Weaver-engine-2.pem ec2-user@eu.weaverengine.com`
+* us.weaverengine.com (West virginia) `ssh -i Weaver-server.pem ec2-user@us.weaverengine.com`
+
 
 
 ## Library reference
 
-Game scripting is pretty straightforward. Each area has its own .lua file. Each file can have multiple places in it.
+Game scripting is pretty straightforward. Each area (such as town, home, forest, etc) has its own .lua file. Each file can have multiple places in it.
+Each place (kitchen, hallway, outside) is simply a function. Print text to the screen with 'p', give user choices with 'choice'. All functions are lowercase
 
-* town.lua
-* home.lua
-* forest.lua
+## p function
+
+The 'p' function prints the specified string in markdown format. There are several valid ways to call it. p"Single line string", p[[Multi-line string]], p("String with variables in it ".. var)
+
+Note that two line-breaks are needed to form a new paragraph in markdown. 
+
+## message function
+
+The message(text) function opens a new page page and displays the specified text. The user clicks "continue", and the next line of code begins.
+
+
+## choice function
+
+The 'choice' function forces the user to choose one of the specified options. 
+
+### Example choices
+
+* "kitchen" - Refers by name to a function in the same file.
+* "world.town.center" - Refers by name to a function in a different file
+* kitchen - Executes the function instead of switching to it. This is usually avoided unless you are making a complex adventure flow instead of a simple navigation system. 
+* ["Button name"] = "kitchen" - Manually specifies a button name for the action instead of using the default "Go to [place]" or the value of the place_ variable
+* ["Button name"] = function goto("kitchen") end - Specifies code to execute for the choice
+* ["Button name"] = handleclickfunction - Specifies a function  to execute for the choice
+
+### Changing the default button names
+
+In the example script, the kitchen\_ and hallway\_ variables define button names for their respective places. By default buttons are named "Go to [place]", where [place] is the function name.
+When only one other function is linking to yours, this doesn't make sense, as you can just specify the button name in the other function if you need to override it. However, if multiple functions link to it, this is a easy way to set the default.
+
+
+
+## Example script 'house.lua'
+
+
+
+	kitchen_ = "Visit the kitchen"
+	function kitchen()
+		p[[
+			You stand at the door, and survey the mess.
+			
+			Unwashed dishes rise in a precarious tower from the sink, and a trail of ants marks the location of a honey jar]]
+		
+		choice({
+			"hallway", 
+			"Wash dishes" = function
+			message("You scrub dishes for hours, and finally finish the last utensil. Your fingers are raw from scubbing fossilized food remains.")
+			goto("kitchen")
+		end})
+	end
+	
+	hallway_ = "Go to the hall"
+	function hallway()
+		p[[
+			The cramped space makes you uneasy, as do the line of freakishly solemn portraits that line the north wall.
+		]]
+		
+		choice("kitchen", ["Go outside"]=outside})
+	end
+	
+	function outside()
+		p[[
+			You stand outside the house, contemplating how much it will cost to fix the roof.
+		]]
+		
+		choice{["Go inside"]="hallway"}
+	end

@@ -1,0 +1,29 @@
+# TODO
+
+* Add support for multiple worlds, with separate state for each world, and each user in each world.
+* Perhaps store user state in a DB? We could overwrite user state by modified date, no need for merging. 
+* 
+
+* Make the layout work across desktop and mobile devices with media queries: 
+	http://webdesignerwall.com/tutorials/adaptive-responsive-design-with-css3-media-queries
+* Make communication happen via ajax so less client-side time is wasted.
+* Add support for event hooks. All .always. files for a world should be loaded for each request.
+
+
+
+### Code editing
+
+* http://github.com/
+* http://ace.ajax.org/
+* http://codemirror.net/manual.html
+
+
+### Random ideas
+
+* Allow a function to be marked as resumable - it saves its own continuation. It should always be called via goto(), never directly from another function.
+* Memcache files by hash
+* Memcache state and/or put it in a db.
+* Some data is stored in the same repository, such as translations, world data, etc. 
+* String interpolation (makes translation easier)
+* 
+

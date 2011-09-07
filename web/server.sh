@@ -14,5 +14,6 @@ cd $DIR
 
 while true 
 do 
+# TODO, should break out of loop if error != 0
 sudo /usr/local/bin/orbit -p 80 weaver.lua 
 done

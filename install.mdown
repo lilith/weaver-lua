@@ -1,0 +1,111 @@
+# Installing
+
+### Dependencies 
+
+These dependencies are installed below, and are just here for reference
+
+* Lua 5.1.4: http://www.lua.org/ftp/lua-5.1.4.tar.gz 
+* wsapi-xavante 1.5-1> sudo luarocks install wsapi-xavante
+* luafilesystem 1.5.0-2> sudo luarocks install luafilesystem
+* markdown .32-2> sudo luarocks install markdown
+* sudo luarocks install orbit
+* sha2 .2.0-1> sudo luarocks install sha2    http://code.google.com/p/sha2/
+* Custom version of pluto, https://github.com/hoelzro/pluto.git
+
+
+## Installing on OS X
+
+1. Download and install Lua
+ 	curl http://www.lua.org/ftp/lua-5.1.4.tar.gz
+	tar zxf lua-5.1.4.tar.gz
+	cd lua-5.1.4
+	sudo make macosx install
+	cd ..
+2. Download and install Git normally ( google it!)
+3. Install Luarocks
+	curl http://luarocks.org/releases/luarocks-2.0.5.tar.gz
+	tar zxf luarocks-2.0.5.tar.gz
+	cd luarocks-2.0.5
+	sudo ./configure
+	make
+	sudo make install
+	cd ..
+4. Install the dependencies
+	sudo /usr/local/bin/luarocks install wsapi-xavante
+	sudo /usr/local/bin/luarocks install luafilesystem
+	sudo /usr/local/bin/luarocks install markdown
+	sudo /usr/local/bin/luarocks install orbit
+5. Using git, download a custom version of pluto, build it, and install it.
+	git clone https://github.com/hoelzro/pluto.git pluto
+	cd pluto
+	make macosx
+	sudo mv pluto.dylib pluto.so
+	sudo cp pluto.so "/usr/lib/lua/5.1/"
+	cd ..
+6. Download and run the weaver engine
+	git clone git://github.com/nathanaeljones/weaver-lua.git weaver
+	cd weaver
+	cd web
+	./script.sh
+
+
+## Installation script for Amazon EC2 Ubuntu 32-bit
+
+
+
+	sudo yum -y install make gcc libreadline6 libreadline6-dev lua lua-devel libtool
+
+	wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz
+	tar zxf luarocks-2.0.5.tar.gz
+	cd luarocks-2.0.5
+	sudo ./configure
+	make
+	sudo make install
+	cd ..
+
+	sudo chmod 777 /usr/local/bin/luarocks
+
+	sudo /usr/local/bin/luarocks install wsapi-xavante
+	sudo /usr/local/bin/luarocks install luafilesystem
+	sudo /usr/local/bin/luarocks install markdown
+	sudo /usr/local/bin/luarocks install orbit
+
+	sudo yum -y install git
+
+	git clone https://github.com/hoelzro/pluto.git pluto
+	cd pluto
+	make linux
+	sudo cp pluto.so "/usr/lib/lua/5.1/"
+	cd ..
+
+
+	git clone git://github.com/nathanaeljones/weaver-lua.git weaver
+	cd weaver
+	cd web
+
+
+## Manual configuration to autostart the server
+
+	sudo chmod 777 server.sh
+
+	sudo chmod 777 /etc/rc.local
+
+
+	vi /etc/rc.local
+
+	press 'i'
+
+	go to end, paste in
+
+	exec /home/ec2-user/weaver/web/server.sh
+
+	press 'esc', type 'w!', enter, 'q', enter
+
+	To start manually, run $ To start manually, run $ sudo /etc/rc.local Press enter to 
+	
+## To stop server.sh
+
+You'll have to kill the server.sh process. Use the first command to find the process id, then 'kill' it. Killing it may cause the port number to stay blocked. 
+
+	ps -ef | grep -i server.sh
+	kill 2447 
