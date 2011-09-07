@@ -154,6 +154,10 @@ function run_code_until_new_response_needed(code, inflow, err)
 	end
 		
 	until waiting_on_user
+		
+	
+	outflow.display.module_path = code.name:gsub("%.","/"):gsub("/[^/]+$","",1) .. ".lua"
+	outflow.display.module_name = code.name:gsub("%.[^%.]+$","",1)
 	
 	return code, outflow
 end

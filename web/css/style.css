@@ -21,7 +21,9 @@ div.footer{
 div.menu{
 	margin-bottom:50px;
 }
-
+div.menu a{
+	padding:10px;
+}
 div.choices{
 	float:right;
 	padding-left:30px;

@@ -31,7 +31,8 @@ function layout(web, args, inner_html, choices_html,log)
 		     div{ class = "container",
 		        div{ class = "header", title = "sitename" },
 		        div{ class = "menu",
-		           a{href="/admin/cleardata", "Clear all data"}
+		           a{href="/admin/cleardata", "Clear all data"},
+							 a{href=args.edit_link, "Edit ".. args.edit_name}
 		        },  
 						div{ class = "choices", choices_html },
 		        div{ class = "contents", inner_html },
@@ -72,7 +73,8 @@ function resume_game(web, args)
 	
 	display = resume("ndj",args.response,err)
 	
-	
+	args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/master/" .. display.module_path
+	args.edit_name = display.module_name
 	
 	return layout(web,args, markdown(display.out), write_choices(display.menu), log)
 
