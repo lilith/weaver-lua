@@ -1,11 +1,11 @@
 require "lfs"
 require "pluto"
-require "lib"
+require "utils"
 require "sha2"
 
 function get_default_code_state(err)
 	if (err == nil) then err = print end
-	return build_coroutine("world.start.start")
+	return build_coroutine("world.start.start",err)
 end
 
 function get_user_data_path(id, segment)
@@ -16,24 +16,6 @@ function get_world_data_path(segment)
 	return  getcoderoot() .. getslash() .. "world-data"  .. getslash() .. segment .. ".bin"
 end
 
-function read_file(path)
-	--Returns nil if data is missing, otherwise returns a string
-	local inp = io.open(path, "rb")
-	if (inp == nil) then 
-		return nil
-	else
-  	local data = inp:read("*all")
-	  assert(inp:close())
-		return data
-	end 
-end
-function write_file(path, data)
-	--Saves the specified string data 
-	print (lfs.mkdir(get_parent_dir(path)))
-	local out = assert(io.open(path, "wb"))
-	out:write(data)
-	assert(out:close())
-end
 
 function get_parent_dir(path)
 	return path:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
@@ -128,7 +110,7 @@ function run_code_until_new_response_needed(code, inflow, err)
 				-- If the new name doesn't have a '.', assume it is in the same file as the last code run.
 				local new_name = outflow.name
 				if (new_name:match("^[^%.]+$") ~= nil) then
-					new_name = get_parent_namespace(code.name).. "." .. outflow.name
+					new_name = ns.parent(code.name).. "." .. outflow.name
 				end
 				local new_code = build_coroutine(new_name,err) 
 				if new_code ~= nil then
@@ -162,89 +144,45 @@ function run_code_until_new_response_needed(code, inflow, err)
 	return code, outflow
 end
 
-function get_parent_namespace(name)
-	return name:gsub("%.[^%.]+$","",1)
-end
 
 
-function get_globals()
-	local globs =  deepcopy(sandbox_env) -- {pairs = pairs,print = print, type=type, coroutine = {yield=coroutine.yield}} -- sandbox_env
-	globs["_G"] = globs
-	return globs
-end
-
-function get_persist_perms()
-	return invert(flatten_to_array(sandbox_env, persistable))
-end
-
-function get_unpersist_perms()
-	return flatten_to_array(sandbox_env, persistable)
-end
-
-function invert(tab)
-	local t = {}
-	for k,v in pairs(tab) do
-		t[v] = k
+function build_coroutine(name,err)
+	-- Find the filename
+	local coderoot = getcoderoot()
+	local filename = coderoot .. getslash() .. ns.parent(name):gsub("%.",getslash()) .. ".lua"
+	-- Create the sandboxed environment
+	local env  = get_globals()
+	-- Load the libraries
+	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
+	if (lib == nil) then return nil end
+	-- Load the file from 'name'
+	local mod = load_in(filename,env,err)
+	if (mod == nil) then return nil end
+	pcall(lib)
+	-- Todo, add hook calls here
+	pcall(mod)
+	-- Look up the function from 'name'
+	local funcname = ns.member(name)
+	local initial_func = env[funcname]
+	if (initial_func == nil) then
+		err ("Couldn't find function " .. funcname .. " in " .. filename)
+		return nil
 	end
-	return t
-end
-
-function flatten_to_array(tab, excluded_values)
-	local arr = {}
-	for k,v in pairs(tab) do
-		
-		if (type(v) == 'table' ) then
-			-- No immediate cyclic refs, like _G. 
-			if (v ~= tab) then
-				local child = flatten_to_array(v,excluded_values)
-				for _,cv in ipairs(child) do
-					if excluded_values[cv] == nil then
-						table.insert(arr,cv)
-					end
-				end
-			end
-		else
-			if excluded_values[v] == nil then
-				if (type(v) ~= 'function') then
-					print("Found value " .. v .. " when flatting to array")
-				end
-				table.insert(arr,v)
-			end
-		end
+	-- We need to update the global state in the environment when the corutine is stared
+	-- This function will be executed in a scope that contains the state_update function from lib.lua
+	local func_wrapper = function(inflow)
+		state_update(inflow)
+		initial_func()
 	end
-	return arr;
-end
-
-function getcoderoot()
-	return get_parent_dir(lfs.currentdir())  
-end
-
-
-function main()
-	-- Default to the current dir
-	print (getcoderoot())
-	
-	local display, response = nil
-	repeat 
-		display = resume("ndj",response, print)
-		print (display.out)
-		print( "-")
-		if (display.menu ~= nil) then
-			for k,v in pairs(display.menu) do
-				print (v)
-			end
-		end
-		print (">")
-		response = io.read()
-	until response == "q"
-
-end
-
-function getslash()
-	return "/"
+	setfenv(func_wrapper,env)
+	local code = coroutine.create(func_wrapper)
+	-- Save the name so they can be recreated
+	return {co=code,name=name}
 end
 
 
+
+-- Loads and parses the specified file into a function, then sets its environment to 'env'. Errors go to the 'err' function.
 function load_in(path, env, err)
 	local func, message = loadfile(path)
 	if (func == nil) then
@@ -257,57 +195,60 @@ function load_in(path, env, err)
 	return func
 end
 
+
+-- Loads a lua file to find the value of a global variable it contains. name is in the form dir.file.var. file does not cotaint the extension.
 function get_var_from_file(name, err)
+	-- Find the filename
 	local coderoot = getcoderoot()
-	-- Strip last 
-	local filename = coderoot .. getslash() .. name:gsub("%.([^%.]-)$","",1):gsub("%.",getslash()) .. ".lua"
-	local _,_,membername = name:find("%.([^%.]+)$")
-	
+	local filename = coderoot .. getslash() .. ns.parent(name):gsub("%.",getslash()) .. ".lua"
+	-- Create the sandboxed environment
 	local env  = get_globals() 
-	print (env)
-	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
-	if (lib == nil) then return nil end
+	-- TODO: if we eventually need to support lib calls in the file root, uncomment this
+	--local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
+	--if (lib == nil) then return nil end
+	-- pcall(lib)
+	-- Hook files would go here
+	
+	-- Load the file into the sandbox and return the var value that the file added to the global environment.
 	local mod = load_in(filename,env,err)
 	if (mod == nil) then return nil end
-	pcall(lib)
-	-- Todo, add hook calls here
 	pcall(mod)
-	return env[membername]
+	return env[ns.member(name)]
 end
 
-function build_coroutine(name,err)
-	-- Load based on string name 
-	-- load
-	-- loadstring
-	-- loadfile
-	-- Get function results from each file
-	local coderoot = getcoderoot()
-	-- Strip last 
-	local filename = coderoot .. getslash() .. name:gsub("%.([^%.]-)$","",1):gsub("%.",getslash()) .. ".lua"
-	local _,_,funcname = name:find("%.([^%.]+)$")
-	
-	local env  = get_globals() 
-	print (env)
-	local lib = load_in(coderoot .. getslash() .. "kernel" .. getslash() .. "lib.lua",env,err)
-	if (lib == nil) then return nil end
-	local mod = load_in(filename,env,err)
-	if (mod == nil) then return nil end
-	pcall(lib)
-	-- Todo, add hook calls here
-	pcall(mod)
-	local initial_func = env[funcname]
-	if (initial_func == nil) then
-		err ("Couldn't find function " .. funcname .. " in " .. filename)
-		return nil
-	end
-	local func_wrapper = function(inflow)
-		state_update(inflow)
-		initial_func()
-	end
-	setfenv(func_wrapper,env)
-	local code = coroutine.create(func_wrapper)
-	-- Save the name so they can be recreated
-	return {co=code,name=name}
+if ns == nil then ns = {} end
+-- Gets the parent of a namespace. "world.town.center" -> "world.town"
+function ns.parent(name)
+	return name:gsub("%.[^%.]+$","",1)
+end
+-- Gets the last segment of a namespace. "world.town.center" -> "center"
+function ns.member(name)
+	local _,_,membername = name:find("%.([^%.]+)$")
+	return membername
+end
+
+
+-- Creates an environment by copying sandbox_env. Used for sandboxing.
+function get_globals()
+	local globs =  deepcopy(sandbox_env) -- {pairs = pairs,print = print, type=type, coroutine = {yield=coroutine.yield}} -- sandbox_env
+	globs["_G"] = globs
+	return globs
+end
+
+function get_persist_perms()
+	return table.invert(table.flatten_to_functions_array(sandbox_env, persistable, print))
+end
+
+function get_unpersist_perms()
+	return table.flatten_to_functions_array(sandbox_env, persistable,print )
+end
+
+function getcoderoot()
+	return get_parent_dir(lfs.currentdir())  
+end
+
+function getslash()
+	return "/"
 end
 
 -- sample sandbox environment
@@ -331,7 +272,7 @@ sandbox_env = {
       rep = string.rep, reverse = string.reverse, sub = string.sub, 
       upper = string.upper },
   table = { insert = table.insert, maxn = table.maxn, remove = table.remove, 
-      sort = table.sort },
+      sort = table.sort, show = table.show},
   math = { abs = math.abs, acos = math.acos, asin = math.asin, 
       atan = math.atan, atan2 = math.atan2, ceil = math.ceil, cos = math.cos, 
       cosh = math.cosh, deg = math.deg, exp = math.exp, floor = math.floor, 
@@ -341,32 +282,13 @@ sandbox_env = {
       rad = math.rad, random = math.random, sin = math.sin, sinh = math.sinh, 
       sqrt = math.sqrt, tan = math.tan, tanh = math.tanh },
   os = { clock = os.clock, difftime = os.difftime, time = os.time },
-debug = {getlocal = debug.getlocal} -- REMOVE THIS
+	debug = {getlocal = debug.getlocal} -- REMOVE THIS
 }
 
 
 persistable = {[math.pi] = math.pi, [math.huge] = math.huge}
 
---This function returns a deep copy of a given table. The function below also copies the metatable to the new table 
--- if there is one, so the behaviour of the copied table is the same as the original. But the 2 tables share the 
--- same metatable, you can avoid this by changing this 'getmetatable(object)' to '_copy( getmetatable(object) )'.
-function deepcopy(object)
-    local lookup_table = {}
-    local function _copy(object)
-        if type(object) ~= "table" then
-            return object
-        elseif lookup_table[object] then
-            return lookup_table[object]
-        end
-        local new_table = {}
-        lookup_table[object] = new_table
-        for index, value in pairs(object) do
-            new_table[_copy(index)] = _copy(value)
-        end
-        return setmetatable(new_table, getmetatable(object))
-    end
-    return _copy(object)
-end
+
 
 function clear_all_data()
 	local function get_parent_dir(path)
@@ -379,4 +301,25 @@ function clear_all_data()
 	os.remove (path.. "users/ndj/code.bin")
 	os.remove (path.. "users/ndj/display.bin")
 	os.remove (path.. "users/ndj/state.bin")
+end
+
+
+function main()
+	-- Default to the current dir
+	print (getcoderoot())
+	
+	local display, response = nil
+	repeat 
+		display = resume("ndj",response, print)
+		print (display.out)
+		print( "-")
+		if (display.menu ~= nil) then
+			for k,v in pairs(display.menu) do
+				print (v)
+			end
+		end
+		print (">")
+		response = io.read()
+	until response == "q"
+
 end
