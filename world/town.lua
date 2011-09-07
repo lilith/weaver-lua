@@ -26,9 +26,9 @@ end
 home_ = "Go to your home (h)"
 function home()
 	
-	p"you can see your little old wood house standing at the gate, you walk towards the door, turn the key in the lock and step in."
+	p"You can see your little old wood house standing at the gate, you walk towards the door, turn the key in the lock and step in."
 	
-	p("you have been here"..inc("user.home.visit",1).."times")
+	p("You have been here"..inc("user.home.visit",1).."times")
 	
 	choose({
 		"bedroom",
@@ -39,7 +39,7 @@ end
 
 function bedroom()
 	
-	p"you open the door and you realize something feels wrong"
+	p"You open the door and you realize something feels wrong"
 	
 	choose({
 		"center",
