@@ -91,7 +91,7 @@ function lookup_external_var(name)
 end
 
 function p (message)
-	display.out = display.out .. '\n' .. message
+	display.out = display.out .. '\n\n' .. message 
 end
 
 function add_option(text, id, shortcut)
