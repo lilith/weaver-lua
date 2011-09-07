@@ -3,8 +3,8 @@
 
 A prototype implementation of the Weaver engine on Lua, using Pluto for persistence. Allows async games to be scripted in a human-readable manner, without callbacks. Just simple function calls, if statements, and choice statements. See kernel/kernel.lua for the engine core.
 
-* [How to install the Weaver Engine](weaver-lua/blob/master/install.mdown)
-* [TODO list](weaver-lua/blob/master/todo.mdown)
+* [How to install the Weaver Engine](https://github.com/nathanaeljones/weaver-lua/blob/master/install.mdown)
+* [TODO list](https://github.com/nathanaeljones/weaver-lua/blob/master/todo.mdown)
 
 ### Current servers
 
