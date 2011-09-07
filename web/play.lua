@@ -28,16 +28,18 @@ function layout(web, args, inner_html, choices_html,log)
         href = web:static_link('/css/style.css'), media = 'screen' }
       },
       body{
-     div{ class = "container",
-        div{ class = "header", title = "sitename" },
-        div{ class = "menu",
-           a{href="/admin/cleardata", "Clear all data"}
-        },  
-        div{ class = "contents", inner_html },
-				div{ class = "choices", choices_html },
+		     div{ class = "container",
+		        div{ class = "header", title = "sitename" },
+		        div{ class = "menu",
+		           a{href="/admin/cleardata", "Clear all data"}
+		        },  
+						div{ class = "choices", choices_html },
+		        div{ class = "contents", inner_html },
+
+						div {style="clear:both;height:1px"}
+		     },
 				pre{ class = "log", log },
-        div{ class = "footer", copyright_notice }
-     }
+				div{ class = "footer", copyright_notice }
       }
    } 
 end
@@ -49,7 +51,7 @@ function write_choices(choices)
 	if (choices == nil) then return "" end
 	local inputs = {}
 	for _,v in pairs(choices) do
-		inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v.id, value=v.text}
+		inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v.id, class = "button orange", value=v.text}
 		-- todo add support for v.shortcut via javascript
 	end
 	return form{
