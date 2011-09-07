@@ -145,8 +145,9 @@ function run_code_until_new_response_needed(code, inflow, err)
 			
 			-- Sending vars
 			if outflow.type == 'getvar' then
+				local temp_err = err
 				inflow.getvar = get_var_from_file(outflow.name,function(message)
-					err("Non-fatal: " .. message)
+					temp_err("Non-fatal: " .. message)
 				end)
 			end
 		end
