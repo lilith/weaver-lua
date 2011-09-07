@@ -105,7 +105,20 @@ These dependencies are installed below, and are just here for reference
 	
 ## To stop server.sh
 
-You'll have to kill the server.sh process. Use the first command to find the process id, then 'kill' it. Killing it may cause the port number to stay blocked. 
+You'll have to kill the server.sh process, followed by the lua/orbit process. 
 
-	ps -ef | grep -i server.sh
-	kill 2447 
+To find the process ID of server.sh and orbit, run the following command. Use the first command to find the process id, then 'kill' it. Killing it may cause the port number to stay blocked. 
+
+	ps -ef | grep -i "server.sh\|orbit"
+
+It will list at least 3 processes: the server.sh process, the orbit process, and the grep process (from the command itself).
+
+	  0 19620     1   0   0:00.00 ttys000    0:00.00 /bin/bash ./server.sh --
+	  0 19624 19620   0   0:00.01 ttys000    0:00.03 /usr/local/bin/lua -lluarocks.loader /usr/local/lib/luarocks/rocks/orbit/2.2.0-2/bin/orbit -p 80 weaver.lua
+	501 19628 11544   0   0:00.00 ttys001    0:00.00 grep -i server.sh\|orbit
+
+
+Kill the server.sh process followed by the /usr/local/bin/lua orbit process. Ignore the grep process.
+
+	kill 19620 
+	kill 19624 
