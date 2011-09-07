@@ -9,6 +9,9 @@ fi
 
 #Loop so we can kill it to reload the site
 
+DIR="$( cd "$( dirname "$0" )" && pwd )"
+cd $DIR
+
 while true 
 do 
 sudo /usr/local/bin/orbit -p 80 weaver.lua 
