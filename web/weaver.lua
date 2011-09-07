@@ -33,7 +33,23 @@ function cleardata(web)
 	return web:redirect(web:link("/"))
 end
 
+function reboot(web)
+	os.exit(0)
+	return web:redirect(web:link("/"))
+end
+
+function pull(web)
+	--TODO: pipe log to file and read it.
+	os.execute('git pull')
+	return web:redirect(web:link("/"))
+end
+
 weaver:dispatch_get(cleardata, "/admin/cleardata")
+
+
+weaver:dispatch_get(pull, "/admin/pull")
+
+weaver:dispatch_get(reboot, "/admin/reboot")
 
 weaver:dispatch_get(function(web)
 	return web:redirect(web:link("/user/ndj/play/"))

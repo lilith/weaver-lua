@@ -32,6 +32,8 @@ function layout(web, args, inner_html, choices_html,log)
 		        div{ class = "header", title = "sitename" },
 		        div{ class = "menu",
 		           a{href="/admin/cleardata", "Clear all data"},
+								a{href="/admin/reboot", "Reboot"},
+								a{href="/admin/pull", "Pull changes"},
 							 a{href=args.edit_link, "Edit ".. args.edit_name}
 		        },  
 						div{ class = "choices", choices_html },
