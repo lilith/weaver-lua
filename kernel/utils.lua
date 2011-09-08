@@ -1,12 +1,12 @@
--- This file defines 
+local dir = require("pl.dir")-- This file defines 
 
 -- table.show, table.invert, table.flatten_to_functions_array
 -- read_file(path), write_file(path,data)
 -- deepcopy(object)
 
-function read_file(path)
+function read_file(filename)
 	--Returns nil if data is missing, otherwise returns a string
-	local inp = io.open(path, "rb")
+	local inp = io.open(filename, "rb")
 	if (inp == nil) then 
 		return nil
 	else
@@ -15,10 +15,10 @@ function read_file(path)
 		return data
 	end 
 end
-function write_file(path, data)
+function write_file(filename, data)
 	--Saves the specified string data 
-	print (lfs.mkdir(get_parent_dir(path)))
-	local out = assert(io.open(path, "wb"))
+	dir.makepath(path.getparent(filename))
+	local out = assert(io.open(filename, "wb"))
 	out:write(data)
 	assert(out:close())
 end
@@ -53,21 +53,20 @@ function path.slash()
 	return "/"
 end
 
-function path.getparent(path)
-	return path:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
+function path.getparent(filename)
+	return filename:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
 end
-
 function path.join(...)
-	local s = path.slash()
-	local p = ""
-	for _, v in ipairs({...}) do
-		if (#p = 0) then 
-			p = v
-		else
-			p = p .. s .. v
-		end
-	end
-	return p
+  local s = path.slash()
+  local p = ""
+  for _, v in ipairs({...}) do
+    if (#p == 0) then 
+      p = v
+    else
+      p = p .. s .. v
+    end
+  end
+  return p
 end
 
 -- Flattens nested tables into a single array of values, dropping any values present in the excluded_values dict.
@@ -109,6 +108,43 @@ function table.invert(tab)
 		t[v] = k
 	end
 	return t
+end
+
+
+-- Code by David Kastrup
+require "lfs"
+
+function dirtree(dir, childrenfirst)
+  assert(dir and dir ~= "", "directory parameter is missing or empty")
+  if string.sub(dir, -1) == "/" then
+    dir=string.sub(dir, 1, -2)
+  end
+
+  local function yieldtree(dir)
+    for entry in lfs.dir(dir) do
+      if entry ~= "." and entry ~= ".." then
+        entry=dir.."/"..entry
+					local attr=lfs.attributes(entry)
+					if childrenfirst then coroutine.yield(entry,attr) end
+					if attr.mode == "directory" then
+					  yieldtree(entry)
+					end
+					if not childrenfirst then coroutine.yield(entry,attr) end
+      end
+    end
+  end
+  return coroutine.wrap(function() yieldtree(dir) end)
+end
+
+
+function deltree(dir)
+	for filename, attr in dirtree(dir,true) do
+		if attr.mode == "directory" then
+			lfs.rmdir(filename)
+		else
+			os.remove(filename)
+		end
+	end
 end
 
 --[[
