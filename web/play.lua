@@ -6,6 +6,8 @@ choice_id_prefix = "choice_"
 function play(web, id)
 	print ("Processing request " ..web.method)
 	
+	web:set_cookie("username", id)
+	
 	local choice_id = nil
 	for k,v in pairs(web.POST) do
 		print (k.. "=".. v)
@@ -14,11 +16,11 @@ function play(web, id)
 			print ("User chose " .. choice_id)
 		end
 	end
-	return resume_game(web,{id = id, response = choice_id})
+	return resume_game(web,{id = id, branch= "master", response = choice_id})
 end
 
 function viewstate(web, id)
-	info = wdebug.getstate("ndj","master")
+	info = wdebug.getstate(id,"master")
 	return layout(web,args, "", "", info)
 	
 	
@@ -58,7 +60,7 @@ end
 
 
 
-function write_choices(choices, err)
+function write_choices(choices, args, err)
 	if (choices == nil) then return "" end
 	local inputs = {}
 	for _,v in pairs(choices) do
@@ -71,7 +73,7 @@ function write_choices(choices, err)
 	end
 	return form{
 		method = "post",
-		action = "/user/ndj/play/",
+		action = "/user/"..args.id .."/play/",
 		div(inputs)
 	}
 end
@@ -86,14 +88,14 @@ function resume_game(web, args)
 		print(message)
 	end
 	
-	display = resume("ndj","master",args.response,err)
+	display = resume(args.id,args.branch,args.response,err)
 	
 	if display.module_path ~= nil then
-		args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/master/" .. display.module_path
+		args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/"..args.branch.."/code" .. display.module_path
 		args.edit_name = display.module_name
 	end
 
-	return layout(web,args, markdown(display.out), write_choices(display.menu,err), log)
+	return layout(web,args, markdown(display.out), write_choices(display.menu,args,err), log)
 
 end
 

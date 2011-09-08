@@ -54,5 +54,9 @@ weaver:dispatch_get(pull, "/admin/pull")
 weaver:dispatch_get(reboot, "/admin/reboot")
 
 weaver:dispatch_get(function(web)
+	if web.cookies["username"] ~= nill then
+			return web:redirect(web:link("/user/"..web.cookies["username"].."/play/"))
+	end
+	
 	return web:redirect(web:link("/user/ndj/play/"))
 end, "/")
