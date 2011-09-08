@@ -10,6 +10,7 @@ These dependencies are installed below, and are just here for reference
 * markdown .32-2> sudo luarocks install markdown
 * sudo luarocks install orbit
 * sha2 .2.0-1> sudo luarocks install sha2    http://code.google.com/p/sha2/
+* penlight 0.9.5-1> sudo luarocks install penlight
 * Custom version of pluto, https://github.com/hoelzro/pluto.git
 
 
@@ -35,6 +36,8 @@ These dependencies are installed below, and are just here for reference
 	sudo /usr/local/bin/luarocks install luafilesystem
 	sudo /usr/local/bin/luarocks install markdown
 	sudo /usr/local/bin/luarocks install orbit
+	sudo /usr/local/bin/luarocks install penlight
+	
 5. Using git, download a custom version of pluto, build it, and install it.
 	git clone https://github.com/hoelzro/pluto.git pluto
 	cd pluto
@@ -69,6 +72,7 @@ These dependencies are installed below, and are just here for reference
 	sudo /usr/local/bin/luarocks install luafilesystem
 	sudo /usr/local/bin/luarocks install markdown
 	sudo /usr/local/bin/luarocks install orbit
+	sudo /usr/local/bin/luarocks install penlight
 
 	sudo yum -y install git
 
