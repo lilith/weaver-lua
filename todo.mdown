@@ -6,10 +6,10 @@
 
 * Make the layout work across desktop and mobile devices with media queries: 
 	http://webdesignerwall.com/tutorials/adaptive-responsive-design-with-css3-media-queries
-* Make communication happen via ajax so less client-side time is wasted.
+* Make communication happen via ajax so less client-side time is wasted. Use http://www.kyne.com.au/~mark/software/lua-cjson.php
 * Add support for event hooks. All .always. files for a world should be loaded for each request.
 
-
+* Add tracing/timing so we know what slows it down
 
 ### Code editing
 
@@ -25,5 +25,10 @@
 * Memcache state and/or put it in a db.
 * Some data is stored in the same repository, such as translations, world data, etc. 
 * String interpolation (makes translation easier)
-* 
+* add memory used indicator to admin dashboard (via ajax if slow)
+* make cachedpersist module that provides cached file reads and writes. Requires that all web server activity go through the same lua thread, and that 1 extra thread be used to periodically flush the cache to disk. 
+
+* a 'settings.lua' file could specify settings for all sibling and child .lua files, such as content rating, error_respawn points
+
+* tracing analysis to discover bugs in a world - split state at each user choice, duplicating by in-memory persist and unpersist. Only explore a fixed depth of splits, such as 8 (2-4)^8 = 256-655,536, a reasonable number of states). Choice selection should be randomized, but complete. I.e, iterate over a randomly sorted choice list.
 

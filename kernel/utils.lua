@@ -47,6 +47,29 @@ function deepcopy(object)
 end
 
 
+if path == nil then path = {} end
+
+function path.slash()
+	return "/"
+end
+
+function path.getparent(path)
+	return path:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
+end
+
+function path.join(...)
+	local s = path.slash()
+	local p = ""
+	for _, v in ipairs({...}) do
+		if (#p = 0) then 
+			p = v
+		else
+			p = p .. s .. v
+		end
+	end
+	return p
+end
+
 -- Flattens nested tables into a single array of values, dropping any values present in the excluded_values dict.
 -- Calls 'err' with a message whenever a value isn't a function. (the value isn't added)
 function table.flatten_to_functions_array(tab, excluded_values, err)

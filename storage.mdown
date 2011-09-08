@@ -1,0 +1,120 @@
+# Storage
+
+### Definitions
+
+* user: is a user account, shared across all branches and worlds.
+* branch: a named version(branch) of the universe; contains 1 or more worlds.
+* world: a named subset of the universe. There can be multiple versions of a world, depending on the branch you are running
+* character: user-specific, branch-specific, world-specific data
+
+### Data segmentation
+
+Data will be segmented based on whether it is shared or user-specific. User-specific data has a lower synchronization priority, and much higher noise and volume.
+If shared data changes very often, it too may go into either a separate repository or separate branches.
+
+Multithreading is possible using https://github.com/Neopallium/lua-llthreads
+
+# Branch data
+
+Code and shared state is stored in the branch. 
+
+In the scope of each file, the 'this' keyword refers to character
+
+Allow users to import their characters from other branches based on a whitelist in the branch. \
+
+## DB options
+
+	>> I would like to try out couchdb with lua. Is there any library, yet?
+	>
+	> AFAIK there is none yet. But you can use LuaSocket [1] for the HTTP
+	> requests, and JSON4Lua [2] to encode and decode request content.
+	>
+	> [1] http://www.tecgraf.puc-rio.br/~diego/professional/luasocket/
+	> [2] http://json.luaforge.net/
+
+If you need a document database, you could also try Tokyo Cabinet with
+its Tokyo Tyrant server which uses Lua as its UDF language (instead of
+JS for CouchDB). I am really having fun with it. There is a Lua module
+to communicate with it:
+http://github.com/phoenixsol/lua-tokyotyrant
+
+The network protocol is easy to understand so you could also write your own.
+And there is a C library in case you want better performance.
+
+
+http://fallabs.com/tokyotyrant/
+
+There is also Redis, but it's master-slave replication, not master-maser :( :(. It seems to have some nice specialize features http://redis.io/clients
+
+
+
+## User data storage
+
+* /user-data/users -- csv of username, e-mail, id, sha2(password, machinekey), default_branch
+* /user-data/[id]/[branch]/current.bin
+	output
+	flow stack
+	state
+* /user-data/[id]/[branch]/named-flows/[name].bin
+
+## Shared data storage
+
+Flat-file representation should allow safe merging.
+
+* /shared-data/[world]/[place]/[file]/values.table
+* /shared-data/[world]/[place]/[file]/[key]/values.table
+
+http://lua-users.org/wiki/TableSerialization
+	
+
+## The Flow stack
+
+* flow.filters.stay\_in\_file -- A command filter that blocks a child flow from leaving the file. Also prevents the child from calling more methods.
+
+* flow.stack.depth -- How deeply the current flow is nested. 1 means the current flow is the root flow.
+* flow.getparent() - Returns the method name, flow ID, and stack depth of the parent flow. 
+
+* flow.goto("name-of-method") -- Drops the current flow and starts a new flow in its place, with the specified method. Keeps the flow ID. Used within worlds.
+* flow.nest_flow("name-of-state", "default-method", commandFilter, userdataprefix) -- If the specified flow ID is already in the flow stack, throws an error. 
+    Otherwise, loads the flow from disk and pushes it onto the stack. 
+    If the flow doesn't exist, a new one is created starting at 'default-method'. Useful for being transported into another world.
+* flow.goto_flow("name-of-state", "default-method") -- If the current flow is named, it is saved to disk. 
+    Then it is removed from the stack, and replaced with the specified flow. Like nest\_flow, but calling flow.done() in the new flow 
+    won't return the user to the current flow, but the current flow's parent.
+* flow.nest_temp("method", commandFilter) -- Starts an unnamed flow with the specified method and runs it until it (or commandFilter) calls done().
+* flow.nest_throwaway("method", commandFilter) -- Starts an unnamed flow with the specified method and runs it until it (or commandFilter) calls done(). Changes to world and user state are discarded. 
+
+
+* flow.reset_flow("name-of-state","method-name") -- Resets the specified named flow to the beginning
+* flow.done() -- Ends the current flow and returns control to the parent. Saves the flow if it is named.
+* flow.done(level) -- Ends the current flow and all parent flows until there are only 'level' number of flows remaining. Saves all named flows.
+
+switchto() is an alias for flow.goto()
+run() is an alias for flow.nest_temp()
+
+### Shared world features (single entrance/exit things)
+
+To implement exec(name), we have to give each world a stack of continuations. Each continuation should include its name and a roundtrip filter function.
+
+Functions executed with 'exec' should not call switchto() on an external function. Warnings should occur if external switchto calls are made
+On functions executed with 'exec', continuation ending means returning to the previous stack item.
+
+### Support for 'dreaming'
+
+Isolated, discarded dreams can be implemented by 
+
+
+Implementing 'dreaming' would require a stack 
+
+## Synchronizing user-local data
+
+User data (will) comprise most of the used space. It's also a very low priority for synchronization, as users only rarely need to migrate 
+
+
+Syncing user-specific data: Commit on each response.
+
+Every 5 minutes, when a request arrives, first run  `git fetch, git merge origin/master -s recursive theirs`
+
+Truncate history occasionally to prevent crazy growth.
+
+http://bogdan.org.ua/2011/03/28/how-to-truncate-git-history-sample-script-included.html

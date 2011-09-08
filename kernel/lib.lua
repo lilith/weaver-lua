@@ -1,14 +1,31 @@
 
 display={out=""}
 
-function state_update(inflow)
-	-- Display value is only passed in on occasion - if it's missing, we just use the copy we have.
-	if inflow.display ~= nil then display = inflow.display end 
-	user = inflow.user
-	world = inflow.world
-	return inflow
+function roundtrip(type,name)
+	return state_update(coroutine.yield(outdata(type,name)))
 end
 
+function state_update(indata)
+	-- Display value is only passed in on occasion - if it's missing, we just use the copy we have.
+	if indata.display ~= nil then display = indata.display end 
+	user = indata.user
+	branch = indata.branch
+	-- Run all filters passed to us. 
+	local filters = indata.childfilters
+	if filters ~= nil then
+		local _,filter
+		for _,filter in ipairs(indata.childfilters) do
+			filter(indata)
+		end
+	end
+	return indata
+end
+function outdata(type, name)
+	local d = {display=display,user=user,branch=branch, type=type, name=name}
+	_G.user = nil -- We don't want these included in the continuation. They'll be outdated when it restarts, and will be passed back to us anyway.
+	_G.branch = nil
+	return d;
+end
 
 function define_var( name,defaultValue)
 	local tab = get_parent_of_var(name, true)
@@ -79,19 +96,15 @@ end
 	  return variables
 	end
 
-function roundtrip(type,name)
-	return state_update(coroutine.yield(outflow(type,name)))
-end
-function outflow(type, name)
-	return {display=display,user=user,world=world, type=type, name=name}
-end
+
+
 
 function lookup_external_var(name)
 	return roundtrip("getvar",name).getvar
 end
 
 function p (message)
-	display.out = display.out .. '\n\n' .. message 
+	display.out = display.out .. '\n\n' .. message:gsub("^[ \t]+",""):gsub("\n[ \t]+","\n")
 end
 
 function add_option(text, id, shortcut)
@@ -124,8 +137,8 @@ function choose(options)
 	-- Allow either the shortcut key or the hash to be used
 	local answer
 	repeat
-		local inflow = roundtrip('prompt')
-		answer = inflow.response
+		local indata = roundtrip('prompt')
+		answer = indata.response
 	until answer ~= nil
 	print ("You pressed " .. answer)
 	local dest = by_id_or_s[answer]
@@ -204,4 +217,12 @@ function run(module)
 	roundtrip('exec',name)
 end
 
-
+-- Define time spans
+time = {
+	one_year = os.time{year=1971, month=1, day=1, hour=0} - os.time{year=1970, month=1, day=1, hour=0},
+	one_month = os.time{year=1970, month=5, day=1, hour=0} - os.time{year=1970, month=4, day=1, hour=0},
+	one_day = os.time{year=1970, month=5, day=2, hour=0} - os.time{year=1970, month=5, day=1, hour=0},
+	one_hour = os.time{year=1970, month=5, day=1, hour=1} - os.time{year=1970, month=5, day=1, hour=0},
+	one_minute = os.time{year=1970, month=5, day=1, hour=1, min = 1, sec = 0} - os.time{year=1970, month=5, day=1, hour=0, min = 0, sec = 0},
+	one_second = os.time{year=1970, month=5, day=1, hour=1, min = 0, sec = 1} - os.time{year=1970, month=5, day=1, hour=0, min = 0, sec = 0}
+}

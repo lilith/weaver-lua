@@ -84,3 +84,4 @@ When only one other function is linking to yours, this doesn't make sense, as yo
 		
 		choice{["Go inside"]="hallway"}
 	end
+	
