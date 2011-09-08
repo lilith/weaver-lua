@@ -17,6 +17,13 @@ function play(web, id)
 	return resume_game(web,{id = id, response = choice_id})
 end
 
+function viewstate(web, id)
+	info = wdebug.getstate("ndj","master")
+	return layout(web,args, "", "", info)
+	
+	
+end
+
 
 function layout(web, args, inner_html, choices_html,log)
    return html{
@@ -33,8 +40,9 @@ function layout(web, args, inner_html, choices_html,log)
 		        div{ class = "menu",
 		           a{href="/admin/cleardata", "Clear all data"},
 								a{href="/admin/reboot", "Reboot"},
+								a{href="/user/ndj/debug/", "View state"},
 								a{href="/admin/pull", "Pull changes"},
-							 a{href=args.edit_link, "Edit ".. args.edit_name}
+							 a{href= (args and args.edit_link or ""), "Edit ".. (args and args.edit_name or "")}
 		        },  
 						div{ class = "choices", choices_html },
 		        div{ class = "contents", inner_html },
@@ -50,11 +58,15 @@ end
 
 
 
-function write_choices(choices)
+function write_choices(choices, err)
 	if (choices == nil) then return "" end
 	local inputs = {}
 	for _,v in pairs(choices) do
-		inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v.id, class = "button orange", value=v.text}
+		if v.id == nil or v.text == nil then
+			err("Invalid choice " .. table.show(v,"choice"))
+		else
+			inputs[#inputs + 1] = input {type="submit", name=choice_id_prefix..v.id, class = "button orange", value=v.text}
+		end
 		-- todo add support for v.shortcut via javascript
 	end
 	return form{
@@ -71,14 +83,17 @@ function resume_game(web, args)
 	
 	local function err(message)
 		log = log .. message .. "\n"
+		print(message)
 	end
 	
-	display = resume("ndj",args.response,err)
+	display = resume("ndj","master",args.response,err)
 	
-	args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/master/" .. display.module_path
-	args.edit_name = display.module_name
-	
-	return layout(web,args, markdown(display.out), write_choices(display.menu), log)
+	if display.module_path ~= nil then
+		args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/master/" .. display.module_path
+		args.edit_name = display.module_name
+	end
+
+	return layout(web,args, markdown(display.out), write_choices(display.menu,err), log)
 
 end
 

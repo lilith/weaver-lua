@@ -27,6 +27,8 @@ weaver:dispatch_post(play, "/user/([^/]+)/play/")
 
 weaver:dispatch_get(play, "/user/([^/]+)/play/")
 
+weaver:dispatch_get(viewstate, "/user/([^/]+)/debug/")
+
 
 function cleardata(web)
 	clear_all_data()
