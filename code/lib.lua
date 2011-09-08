@@ -1,15 +1,20 @@
 
 display={out=""}
-
+this = {}
+shared = {}
 function roundtrip(type,name)
 	return state_update(coroutine.yield(outdata(type,name)))
 end
 
 function state_update(indata)
 	-- Display value is only passed in on occasion - if it's missing, we just use the copy we have.
-	if indata.display ~= nil then display = indata.display end 
-	user = indata.user
-	branch = indata.branch
+	if indata.display ~= nil then _G.display = indata.display end 
+	_G.user = indata.user
+	_G.branch = indata.branch
+	if user[loaded_filename] == nil then user[loaded_filename] = {} end
+	if branch[loaded_filename] == nil then branch[loaded_filename] = {} end
+	_G.this = _G.user[loaded_filename]
+	_G.shared = _G.branch[loaded_filename]
 	-- Run all filters passed to us. 
 	local filters = indata.childfilters
 	if filters ~= nil then
@@ -20,8 +25,13 @@ function state_update(indata)
 	end
 	return indata
 end
-function outdata(type, name)
-	local d = {display=display,user=user,branch=branch, type=type, name=name}
+function outdata(type, funcname)
+	local d = {display=_G.display,user=_G.user,branch=_G.branch, msg  = {type=type, funcname=funcname}}
+	-- Remove convenience tables unless they have data in them.
+	if table.isempty(user[loaded_filename]) then user[loaded_filename] = nil end
+	if table.isempty(branch[loaded_filename]) then branch[loaded_filename] = nil end
+	_G.this = nil
+	_G.shared = nil
 	_G.user = nil -- We don't want these included in the continuation. They'll be outdated when it restarts, and will be passed back to us anyway.
 	_G.branch = nil
 	return d;
@@ -29,6 +39,7 @@ end
 
 function define_var( name,defaultValue)
 	local tab = get_parent_of_var(name, true)
+	name = ns.member(name)
 	if (tab[name] == nil) then
 		tab[name] = defaultValue;
 	end
@@ -126,7 +137,7 @@ function choose(options)
 				key = lookup_external_var(value .. "_")
 			end
 			-- Fallback to autonaming
-			if (key == nil) then key = "Go to " .. value end
+			if (key == nil) then key = "Go to " .. ns.member(value) end
 		end
 		_,_,shortcut = key:find("%((%l)%)")
 		if shortcut ~= nil then  by_id_or_s[shortcut] = value end
@@ -142,6 +153,9 @@ function choose(options)
 	until answer ~= nil
 	print ("You pressed " .. answer)
 	local dest = by_id_or_s[answer]
+	if dest == nil then
+		-- TODO, throw error and restart loop
+	end
 	if type(dest) == 'string' then
 		roundtrip('goto',dest)
 	else
@@ -150,11 +164,16 @@ function choose(options)
 end
 
 function message(text, button_text)
+	if button_text == nill then button_text = "Continue" end
 	display.out = text
-	display.menu = {text=button_text, shortcut='c', id='continue'}
+	display.menu = {{text=button_text, shortcut='c', id='continue'}}
 	roundtrip('prompt')
 end
 
+function clear()
+	display.out = ""
+	display.menu = {}
+end
 -- Returns a value between 0 and 1
 function random_number()
 	math.randomseed( tonumber(tostring(os.time()):reverse():sub(1,6)) )
@@ -205,16 +224,40 @@ function do_random(actions)
 	-- TODO: Throw an error
 end
 
+function table.isempty(tab)
+	return next(tab) == nil
+end
 
 -- Ends the currently executing module, and starts the newly specified one
 function switchto(name)
+	display.menu = {}
+	display.out = ""
 	roundtrip('goto',name)
 end
 
--- Runs the specified module inside the currently executing module. Throws an exception if the module isn't marked as 'embeddable'
--- Not implemented
-function run(module)
-	roundtrip('exec',name)
+function goto(name)
+	switchto(name)
+end
+
+if ns == nil then ns = {} end
+-- Gets the parent of a namespace. "world.town.center" -> "world.town"
+function ns.parent(name)
+	return name:gsub("%.[^%.]+$","",1)
+end
+-- Gets the last segment of a namespace. "world.town.center" -> "center"
+function ns.member(name)
+	local _,_,membername = name:find("%.([^%.]+)$")
+	return membername and membername or name
+end
+function ns.hasdot(name)
+	return name:match("^[^%.]+$") == nil
+end 
+function ns.resolve(name, base)
+	if ns.hasdot(name) then
+		return name
+	else
+		return base .. "." .. name
+	end
 end
 
 -- Define time spans
