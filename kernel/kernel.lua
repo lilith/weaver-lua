@@ -37,12 +37,24 @@ function load_and_parse(path, default_data)
 	return data
 end
 
-
--- Returns a display state object
-function resume(id,branch, response,err)
+wdebug = {}
+function wdebug.getstate(id,branch)
 	-- User state file
 	local user_file = path.join(path.userdata() , id , branch,"default.bin")
-	local user_state = load_and_parse(user_file,{data = {}, flowstack={[1]=get_default_code_state(err)})
+	local user_state = load_and_parse(user_file,{data = {}, flowstack={[1]=get_default_code_state(err)}})
+	-- World state file
+	local branch_file = path.join(path.branchdata() , branch, "default.bin")
+	local branch_state = load_and_parse(branch_file,{})
+
+	return table.show(user_state,"user_state")
+		..   table.show(branch_state,"branch_state")
+end
+	
+-- Returns a display state object
+function resume(id, branch, response,err)
+	-- User state file
+	local user_file = path.join(path.userdata() , id , branch,"default.bin")
+	local user_state = load_and_parse(user_file,{data = {}, flowstack={[1]=get_default_code_state(err)}})
 	local named_state_dir = path.join(path.userdata() , id , branch,"named-states")
 	
 	-- If there is no response from the user, and we have an existing display state, we don't need to resume any code, just return the current response. 
@@ -59,7 +71,7 @@ function resume(id,branch, response,err)
 
 	-- Save code and resulting state
 	write_file(user_file, pluto.persist(get_persist_perms(),user_state))
-	write_file(branch_state, pluto.persist(get_persist_perms(),branch_state))
+	write_file(branch_file, pluto.persist(get_persist_perms(),branch_state))
 	
 	-- Return new display object
 	return user_state.display
@@ -92,31 +104,90 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 	local flowstack = user_state.flowstack
 	indata.user = user_state.data
 	indata.branch = branch_state
+	
+	local loop_count = 0
+	local escape_count = 0
+	local top_flow
   repeat
-		
+
 		-- Resume running the flow at the top of the stack
-		local top_flow = flowstack[#flowstack]
+		top_flow = flowstack[#flowstack]
 		indata.user.flow_depth = #flowstack
 		-- Build a list of all child filters in the flow stack, with the nearest parents filters listed first.
 		indata.flowfilters = {}
-		local i,_, filter
-		for i = #flowstack -1, 1, -1 do
-			if flowstack[i].childfilters ~= nil then
-				for _, filter in ipairs(flowstack[i].childfilters) do
-					table.insert(indata.flowfilters,filter)
+		if #flowstack > 1 then
+			local i,_, filter
+			for i = #flowstack -1, 1, -1 do
+				if flowstack[i].childfilters ~= nil then
+					for _, filter in ipairs(flowstack[i].childfilters) do
+						table.insert(indata.flowfilters,filter)
+					end
 				end
 			end
 		end
+		
+		local last_message = outdata and outdata.msg or nil
 		-- resume scripts
+		--err("Running " .. top_flow.funcname .. " [level "..#flowstack.."]")
+		--err(table.show(flowstack,"stack_trace"))
+		
+	  --err(table.show(indata.user,"user.data"))
 		success, outdata = coroutine.resume(top_flow.continuation, indata)
 		
 		-- Check for failure
 		local failed = false
 		if success == false then failed = true end -- Never started
-		if coroutine.status(top_flow.continuation) == 'dead' and (outdata == nil or outdata.msg.nil or outdata.msg.type ~= 'goto') then failed = true end -- Runtime errors or function ended
+		if (coroutine.status(top_flow.continuation) == 'dead') then failed = true end -- Runtime errors or function ended
+
+		-- Prevent endless loops
+		if loop_count > 29 then
+			print ("Stopping infinite looping at 30: " .. loop_count)
+			-- We've gota recursive problem.
+			print(top_flow.funcname .. " executed " .. (failed and (' with errors:\n' .. outdata) or ' successfully'))
+			if (not failed) then
+				print(outdata.msg .. " Message arrived: " .. table.show(outdata.msg,"message"))
+			else
+				table.show(outdata,"output")
+			end
+		end
+
+		-- Handle endless loops
+		if loop_count > 30 then
+			failed = true
+			err ("Canceled " .. top_flow.funcname .. " due to excessive looping")
+			if escape_count > 1 then
+				if (outdata ~= nil and outdata.display ~= nil) then 
+					user_state.display = outdata.display
+				end
+				return user_state,branch_state
+			end
+			escape_count = escape_count + 1
+			loop_count = 0
+		end
+		loop_count = loop_count + 1
+		
+		-- Handle failure
+		if failed then
+			if (success == true and outdata == nil) then
+				err ("Module " .. top_flow.funcname .. " seems to be incomplete. Remember to provide the user with choices, and make sure all those choices actually do something or go somewhere.")
+				err ("Previous module sent message " .. table.show(last_message))
+
+			end
+			if (outdata ~= nil) then outdata = " with result:\n " .. outdata .."\n" else outdata = "" end
+			err ("Module "..top_flow.funcname.." ended unexpectedly" ..  outdata)
+			err ("Starting over at safe point")
+			-- Go to a safe point in the game
+			local new_flow = get_default_code_state(err)
+			new_flow.id = top_flow.id -- Keep the flow ID in case it is a named flow.
+			flowstack[#flowstack] = new_flow
+			-- Strip user response, and also ignore whatever state changes might have happened by not copying outdata
+			indata.response = nil
+			--TODO: add support for looping functions.
+		end
+		
 		
 		-- Define function for popping the current flow and saving it to disk (if it has an ID)
-		local function pop()
+		local function pop(flowstack)
 			local popped = flowstack[#flowstack]
 			flowstack:remove()
 			if popped.id ~= nil then -- Save the flow if it is named. 
@@ -149,19 +220,27 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 		end
 		
 		-- Handle success, and process the message from the script
-		if not failed then 
+		if failed == false then 
+			
 			local msg = outdata.msg
 			local msg_type = nil
 			if msg ~= nil then msg_type = msg.type end
 			
+			if msg_type == 'prompt' then
+				print("Waiting on user")
+				waiting_on_user = true
+			end
+
 			-- If the new name doesn't have a '.', assume it is in the same file as the last code run, and resolve it to an absolute path.
-			if msg ~= nil and msg.funcname ~= nil then msg.funcname = ns.resolve(msg.funcname,ns.parent(top_flow.funcname))
+			if msg ~= nil and msg.funcname ~= nil then msg.funcname = ns.resolve(msg.funcname,ns.parent(top_flow.funcname)) end
 			
+			print("Success: message arrived:" .. table.show(msg,"message"))
+				
 			if msg_type == 'goto' then
 				local new_flow = build_coroutine(msg.funcname,err) 
 				-- If the name doesn't exist, restart the current flow at its entry point
-				if new_code == nil then
-					err("Failed to locate " .. new_name .. ", falling back to " .. top_flow.funcname)
+				if new_flow == nil then
+					err("Failed to locate " .. msg.funcname .. ", falling back to " .. top_flow.funcname)
 					new_flow = build_coroutine(top_flow.funcname,err) --Could fail if code is edited
 				end
 				-- Replace top_flow with new_flow
@@ -173,7 +252,7 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 				if msg.level == nil then msg.level = #flowstack -1 end
 				-- Exit flows until we are to the desired depth
 				while #flowstack > msg.level do
-					pop()
+					pop(flowstack)
 				end
 			end
 			if msg_type == 'goto_flow' then
@@ -181,7 +260,7 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 				if new_flow == nil then
 					err("Failed to switch to flow ".. msg.flowname .. "; failed to locate " .. msg.funcname)
 				else
-					pop()
+					pop(flowstack)
 					flowstack[#flowstack + 1] = new_flow
 				end
 			end
@@ -200,39 +279,18 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 				resetflow(msg.flowname, msg.funcname)
 			end
 			
-			if outdata.type == 'prompt' then
-				waiting_on_user = true
-			end 
+
 			-- We need to move outdata state into indata state for the next round
-			indata = {args=outdata.args, world=outdata.world, user=outdata.user, display = outdata.display}
+			indata = {args=outdata.args, branch=outdata.branch, user=outdata.user}
 			
 			-- Sending vars
-			if outdata.type == 'getvar' then
+			if msg_type == 'getvar' then
 				local temp_err = err
-				indata.getvar = get_var_from_file(outdata.name,function(message)
+				indata.getvar = get_var_from_file(msg.funcname,function(message)
 					temp_err("Non-fatal: " .. message)
 				end)
 			end
 		end
-		-- Handle failure
-		if failed then
-			if (success == true and outdata == nil) then
-				err ("Module " .. top_flow.funcname .. " seems to be incomplete. Remember to provide the user with choices, and make sure all those choices actually do something or go somewhere.")
-				
-			end
-			if (outdata ~= nil) then outdata = " with result:\n " .. outdata .."\n" else outdata = "" end
-			err ("Module "..code.name.." ended unexpectedly" ..  outdata)
-			err ("Starting over at safe point")
-			-- Go to a safe point in the game
-			local new_flow = get_default_code_state()
-			new_flow.id = top_flow.id -- Keep the flow ID in case it is a named flow.
-			flowstack[#flowstack] = top_flow
-			-- Strip user response, and also ignore whatever state changes might have happened by not copying outdata
-			indata.response = nil
-			--TODO: add support for looping functions.
-		end
-		
-	end
 		
 	until waiting_on_user
 	
@@ -240,8 +298,8 @@ function run_code_until_new_response_needed(user_state, branch_state, named_stat
 	user_state.data = outdata.user
 	branch_state = outdata.branch
 	
-	user_state.display.module_path = code.name:gsub("%.","/"):gsub("/[^/]+$","",1) .. ".lua"
-	user_state.display.module_name = code.name:gsub("%.[^%.]+$","",1)
+	user_state.display.module_path = flowstack[#flowstack].funcname:gsub("%.","/"):gsub("/[^/]+$","",1) .. ".lua"
+	user_state.display.module_name = flowstack[#flowstack].funcname:gsub("%.[^%.]+$","",1)
 	
 	return user_state, branch_state
 end
@@ -253,6 +311,9 @@ function build_coroutine(name,err)
 	local filename = path.join(path.branchcode(),ns.parent(name):gsub("%.",path.slash()) .. ".lua")
 	-- Create the sandboxed environment
 	local env  = get_globals()
+	env.loaded_funcname = name
+	env.loaded_filename = ns.parent(name)
+	
 	-- Load the libraries
 	local lib = load_in(path.join(path.branchcode(), "lib.lua"),env,err)
 	if (lib == nil) then return nil end
@@ -324,16 +385,16 @@ end
 -- Gets the last segment of a namespace. "world.town.center" -> "center"
 function ns.member(name)
 	local _,_,membername = name:find("%.([^%.]+)$")
-	return membername
+	return membername and membername or name
 end
 function ns.hasdot(name)
-	return new_name:match("^[^%.]+$") ~= nil
+	return name:match("^[^%.]+$") == nil
 end 
 function ns.resolve(name, base)
-	if not ns.hasdot(name) then
-		return base .. "." .. name
-	else
+	if ns.hasdot(name) then
 		return name
+	else
+		return base .. "." .. name
 	end
 end
 
@@ -345,6 +406,7 @@ function get_globals()
 end
 
 function get_persist_perms()
+	-- TODO: add user and branch data here so we don't duplicate that data in every single flow.
 	return table.invert(table.flatten_to_functions_array(sandbox_env, persistable, print))
 end
 
@@ -357,7 +419,7 @@ end
 
 
 -- sample sandbox environment
--- TODO: add user and branch data here so we don't duplicate that data in every single flow.
+
 sandbox_env = {
   ipairs = ipairs,
   next = next,
@@ -397,16 +459,8 @@ persistable = {[math.pi] = math.pi, [math.huge] = math.huge}
 
 
 function clear_all_data()
-	local function path.getparent(path)
-		return path:gsub("[/\\]([^\/\\]-)[/\\]?$","",1)
-	end
-
-	local path = path.getparent(lfs.currentdir())   .."/"
-
-	os.remove (path.. "world-data/state.bin")
-	os.remove (path.. "users/ndj/code.bin")
-	os.remove (path.. "users/ndj/display.bin")
-	os.remove (path.. "users/ndj/state.bin")
+	deltree(path.branchdata())
+	deltree(path.userdata())
 end
 
 
