@@ -3,19 +3,15 @@ function kitchen()
 	p[[
 		You stand at the door, and survey the mess.]]
 	
-	--define_var("this.disheswashed",0)
-	--define_var("user.world.house.kitchen",0)
-	
-	local unwashed = (this.disheswashed == null) or (this.disheswashed < (os.time() - time.one_day))
-	
+	-- Let them go back to the hallway
 	local choices = {"hallway"}
 	
-	if unwashed then 
+	-- If the dishes haven't been washed to today, let them wash the dishes
+	if (this.disheswashed == null) or (this.disheswashed < (os.time() - time.one_day)) then 
 		p[[	Unwashed dishes rise in a precarious tower from the sink, and a trail of ants marks the location of a honey jar]]
 		choices["Wash dishes"]= function()
-		  this.disheswashed = os.time()
+		  this.disheswashed = os.time() -- Set the time the dishes were washed.
 			message("You scrub dishes for hours, and finally finish the last utensil. Your fingers are raw from scubbing fossilized food remains.")
-			
 			goto("kitchen")
 		end
 	end
