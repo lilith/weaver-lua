@@ -1,11 +1,11 @@
-snowdunes_ = "Purchase the snowglobe"
+snowdunes_ = "Snow dunes"
 function snowdunes()
 	p[[
 		Hills of snow roll for miles in every direction as a fierce blizzard rips at your
         skin. In this weather, visibility is near-zero. Which way should you go? ]]
-	
+
 	-- Let them go back to the hallway
-	local choices = {"north", "south", "east", "west"}
+	local choices = {"north"}
 	
 	choose(choices)
 end
@@ -17,6 +17,4 @@ function north()
         Just when you think of turning around, you see a massive stone tower. Though
         barely, you can make out small light sources coming from the tower's apex.
     ]]
-
-    local choices = {"tower.foyer", }
 end

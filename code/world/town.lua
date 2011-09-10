@@ -90,7 +90,9 @@ function shakesnowglobe()
         Suddenly, you fall in a heap on the ground, forced into a dream-state.
         You awake, with no possessions, in any icy tundra.
 
-        goto("ice realm.chasm.snowdunes");
+        choose({
+            "ice realm.chasm.snowdunes"
+        })
     ]]
 end
 -- ---------------------------------------------------------
