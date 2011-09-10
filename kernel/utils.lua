@@ -63,7 +63,7 @@ function path.join(...)
     if (#p == 0) then 
       p = v
     else
-      p = p .. s .. v
+      p = p:gsub(path.slash() .."$","") .. s .. v:gsub("^" ..path.slash(),"")
     end
   end
   return p
@@ -99,6 +99,14 @@ function table.flatten_to_functions_array(tab, excluded_values, err)
 end
 
 
+function file_exists(n)
+		local f=io.open(n)
+		if f == nil then return false
+		else 
+			io.close(f) 
+			return true
+			end
+	end
 
 
 -- Returns an inverted table where the values are the keys and vice versa. Only safe with arrays, dicts may lose data on duplicate values
