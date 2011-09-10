@@ -85,7 +85,7 @@ end
 
 shakesnowglobe_ = "Shake the snowglobe"
 function shakesnowglobe()
-    p {{
+    p [[
         Without hesitation, you shake the snowglobe and begin to feel lightheaded.
         Suddenly, you fall in a heap on the ground, forced into a dream-state.
         You awake, with no possessions, in any icy tundra.
