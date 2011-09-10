@@ -6,7 +6,8 @@ function center()
 	
 	choose({
 		"market", 
-		"world.house.outside", 
+		"world.house.outside",
+        "world.test.rabbithole.rabbithole",
 		"world.forest.entrance"
  	})
 	
