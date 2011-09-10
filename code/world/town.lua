@@ -20,9 +20,80 @@ function market()
 	
 	choose({
 		"center",
+        "merchant",
 		"world.house.outside"
  	})
 end
+
+-- Ice Realm arc ---------------------------------------------------
+merchant_ = "Inspect the hooded merchant"
+function merchant()
+    p [[
+        You approach the odd merchant and examine each trinket individually. A
+        finely-crafted snowglobe catches your eye.
+    ]]
+
+    choose({
+        "inspectsnowglobe",
+        "leave"
+    })
+end
+
+leave_ = "Leave"
+function leave()
+    p [[ 
+        You politely nod your head as you leave the man's booth. His 
+        one visible glass eye follows your movement until you disappear back
+        into the crowd.
+    ]]
+    
+    goto("market");
+end
+
+inspectsnowglobe_ = "Inspect the snowglobe"
+function inspectsnowglobe()
+    p [[
+        Curious, you pick up the snowglobe, handling it with care. In a low,
+        muffled voice, the merchant says, "That there is a magical artifact.
+        I'm told if you shake it, something...special may happen." As you begin
+        to rattle the item, the merchant grabs your wrists, stopping you. 
+        "500 coins."
+    ]]
+
+    choose({
+        "paymerchant",
+        "leave"
+    })
+end
+
+paymerchant_ = "Pay the merchant"
+function paymerchant()
+    p [[
+        Reaching in your pant's pocket, you take out your money and place it on 
+        the table. The merchant's fingers quickly parse the change, counting 
+        every last coin. As he greedily thumbs through your money, you gaze 
+        into the snowglobe. 
+
+        Peering closely into it, you can see a tower, a boat, a cave, and an oasis--
+        quite odd items to be found inside a snowglobe.
+    ]]
+
+    choose({
+        "shakesnowglobe"
+    })
+end
+
+shakesnowglobe_ = "Shake the snowglobe"
+function shakesnowglobe()
+    p {{
+        Without hesitation, you shake the snowglobe and begin to feel lightheaded.
+        Suddenly, you fall in a heap on the ground, forced into a dream-state.
+        You awake, with no possessions, in any icy tundra.
+
+        goto("ice realm.chasm.snowdunes");
+    ]]
+end
+-- ---------------------------------------------------------
 
 home_ = "Go to your home (h)"
 function home()
