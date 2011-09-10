@@ -15,7 +15,9 @@ package.cpath = package.cpath .. ";../kernel/?.so"
 print (package.path)
 require "kernel"
 
+require "layout"
 require "play"
+require "edit"
 
 weaver:dispatch_static("/css/.+")
 weaver:dispatch_static("/js/.+")
@@ -48,6 +50,10 @@ end
 
 weaver:dispatch_get(cleardata, "/admin/cleardata")
 
+
+weaver:dispatch_get(edit.listfiles, "/([^/]+)/edit/listfiles")
+weaver:dispatch_get(edit.newfile, "/([^/]+)/edit/newfile")
+weaver:dispatch_post(edit.createnewfile, "/([^/]+)/edit/createnewfile")
 
 weaver:dispatch_get(pull, "/admin/pull")
 

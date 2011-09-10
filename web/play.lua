@@ -21,44 +21,10 @@ end
 
 function viewstate(web, id)
 	info = wdebug.getstate(id,"master")
-	return layout(web,args, "", "", info)
+	return play_layout(web,args, "", "", info)
 	
 	
 end
-
-
-function layout(web, args, inner_html, choices_html,log)
-   return html{
-      head{
-     title{app_title},
-     meta{ ["http-equiv"] = "Content-Type",
-        content = "text/html; charset=utf-8" },
-     link{ rel = 'stylesheet', type = 'text/css', 
-        href = web:static_link('/css/style.css'), media = 'screen' }
-      },
-      body{
-		     div{ class = "container",
-		        div{ class = "header", title = "sitename" },
-		        div{ class = "menu",
-		           a{href="/admin/cleardata", "Clear all data"},
-								a{href="/admin/reboot", "Reboot"},
-								a{href="/user/ndj/debug/", "View state"},
-								a{href="/admin/pull", "Pull changes"},
-							 a{href= (args and args.edit_link or ""), "Edit ".. (args and args.edit_name or "")}
-		        },  
-						div{ class = "choices", choices_html },
-		        div{ class = "contents", inner_html },
-
-						div {style="clear:both;height:1px"}
-		     },
-				pre{ class = "log", log },
-				div{ class = "footer", copyright_notice }
-      }
-   } 
-end
-
-
-
 
 function write_choices(choices, args, err)
 	if (choices == nil) then return "" end
@@ -91,12 +57,12 @@ function resume_game(web, args)
 	display = resume(args.id,args.branch,args.response,err)
 	
 	if display.module_path ~= nil then
-		args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/"..args.branch.."/code" .. display.module_path
+		args.edit_link = "https://github.com/nathanaeljones/weaver-lua/edit/"..args.branch.."/code/" .. display.module_path
 		args.edit_name = display.module_name
 	end
 
-	return layout(web,args, markdown(display.out), write_choices(display.menu,args,err), log)
+	return play_layout(web,args, markdown(display.out), write_choices(display.menu,args,err), log)
 
 end
 
-orbit.htmlify(weaver, "resume_game", "layout", "write_choices")
+orbit.htmlify(weaver, "resume_game", "write_choices")
