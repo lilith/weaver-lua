@@ -45,7 +45,7 @@ function leave()
         one visible glass eye follows your movement until you disappear back
         into the crowd.")
     
-    switchto("market")
+    goto("market")
 end
 
 inspectsnowglobe_ = "Inspect the snowglobe"
@@ -87,7 +87,7 @@ function shakesnowglobe()
         Suddenly, you fall in a heap on the ground, forced into a dream-state.
         You awake, with no possessions, in any icy tundra.")
 
-        switchto("ice realm.chasm.snowdunes")
+        goto("ice realm.chasm.snowdunes")
 end
 -- ---------------------------------------------------------
 
