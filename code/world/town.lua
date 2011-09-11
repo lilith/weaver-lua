@@ -41,9 +41,7 @@ end
 
 leave_ = "Leave"
 function leave()
-    message("You politely nod your head as you leave the man\'s booth. His 
-        one visible glass eye follows your movement until you disappear back
-        into the crowd.")
+    message("You politely nod your head as you leave the man\'s booth. His one visible glass eye follows your movement until you disappear backinto the crowd.")
     
     goto("market")
 end
