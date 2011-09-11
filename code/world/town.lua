@@ -81,9 +81,7 @@ end
 
 shakesnowglobe_ = "Shake the snowglobe"
 function shakesnowglobe()
-    message("Without hesitation, you shake the snowglobe and begin to feel lightheaded.
-        Suddenly, you fall in a heap on the ground, forced into a dream-state.
-        You awake, with no possessions, in any icy tundra.")
+    message("Without hesitation, you shake the snowglobe and begin to feel lightheaded. Suddenly, you fall in a heap on the ground, forced into a dream-state. You awake, with no possessions, in any icy tundra.")
 
         goto("ice realm.chasm.snowdunes")
 end
