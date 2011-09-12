@@ -1,4 +1,5 @@
 foyer_ = "Enter foyer"
+foyer_ = "Enter the foyer"
 function foyer()
 	p[[
         Inside the foyer, dust is 
