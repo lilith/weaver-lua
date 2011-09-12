@@ -17,4 +17,6 @@ function north()
         Just when you think of turning around, you see a massive stone tower. Though
         barely, you can make out small light sources coming from the tower's apex.
     ]]
+
+    choose({"world.icerealm.tower.foyer"})
 end
