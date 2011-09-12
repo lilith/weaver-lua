@@ -1,7 +1,8 @@
 kitchen_ = "Visit the kitchen"
 function kitchen()
 	p[[
-		You stand at the door, and survey the mess.]]
+		You stand at the door, and survey the mess.
+    ]]
 	
 	-- Let them go back to the hallway
 	local choices = {"hallway"}

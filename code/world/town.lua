@@ -41,9 +41,9 @@ end
 
 leave_ = "Leave"
 function leave()
-    message("You politely nod your head as you leave the man\'s booth. His one visible glass eye follows your movement until you disappear backinto the crowd.")
+    message("You politely nod your head as you leave the man\'s booth. His one visible glass eye follows your movement until you disappear back into the crowd.")
     
-    goto("market")
+    switchto("market")
 end
 
 inspectsnowglobe_ = "Inspect the snowglobe"
@@ -83,7 +83,7 @@ shakesnowglobe_ = "Shake the snowglobe"
 function shakesnowglobe()
     message("Without hesitation, you shake the snowglobe and begin to feel lightheaded. Suddenly, you fall in a heap on the ground, forced into a dream-state. You awake, with no possessions, in any icy tundra.")
 
-        goto("ice realm.chasm.snowdunes")
+    switchto("icerealm.chasm.snowdunes")
 end
 -- ---------------------------------------------------------
 
