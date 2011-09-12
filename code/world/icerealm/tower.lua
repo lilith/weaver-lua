@@ -40,13 +40,13 @@ end
 
 enterunbarreddoor_ = "Enter the unbarred door"
 function enterunbarreddoor()
-    p {{
+    p [[
         You shake any cowardice you have and reason that there is no risk without 
         reward. In a burst of bravado, you swing open the door and descend the small 
         flight of stairs. At the bottom of the stairs, you find yourself in a long, damp hallway 
         lined with torches. A reinforced iron door rests at the end. Silence lingers 
         uncomfortably. It is too quiet.
-    }}
+    ]]
 
     choose({"approachirondoor", "ascendtofoyer"})
 end
