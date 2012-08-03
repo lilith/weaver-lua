@@ -42,6 +42,7 @@ These dependencies are installed below, and are just here for reference
 	sudo /usr/local/bin/luarocks install markdown
 	sudo /usr/local/bin/luarocks install orbit
 	sudo /usr/local/bin/luarocks install penlight
+  sudo luarocks install sha2
 	
 5. Using git, download a custom version of pluto, build it, and install it.
 
