@@ -49,7 +49,7 @@ These dependencies are installed below, and are just here for reference
 	cd pluto
 	make macosx
 	sudo mv pluto.dylib pluto.so
-	sudo cp pluto.so "/usr/lib/lua/5.1/"
+	sudo cp pluto.so "/usr/local/lib/lua/5.1/"
 	cd ..
 
 6. Download and run the weaver engine
@@ -57,7 +57,7 @@ These dependencies are installed below, and are just here for reference
 	git clone git://github.com/nathanaeljones/weaver-lua.git weaver
 	cd weaver
 	cd web
-	./script.sh
+	./server.sh
 
 
 ## Installation script for Amazon EC2 Ubuntu 32-bit
