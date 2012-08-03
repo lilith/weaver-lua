@@ -17,13 +17,16 @@ These dependencies are installed below, and are just here for reference
 ## Installing on OS X
 
 1. Download and install Lua
+
  	curl http://www.lua.org/ftp/lua-5.1.4.tar.gz
 	tar zxf lua-5.1.4.tar.gz
 	cd lua-5.1.4
 	sudo make macosx install
 	cd ..
+
 2. Download and install Git normally ( google it!)
 3. Install Luarocks
+
 	curl http://luarocks.org/releases/luarocks-2.0.5.tar.gz
 	tar zxf luarocks-2.0.5.tar.gz
 	cd luarocks-2.0.5
@@ -31,7 +34,9 @@ These dependencies are installed below, and are just here for reference
 	make
 	sudo make install
 	cd ..
+
 4. Install the dependencies
+
 	sudo /usr/local/bin/luarocks install wsapi-xavante
 	sudo /usr/local/bin/luarocks install luafilesystem
 	sudo /usr/local/bin/luarocks install markdown
@@ -39,13 +44,16 @@ These dependencies are installed below, and are just here for reference
 	sudo /usr/local/bin/luarocks install penlight
 	
 5. Using git, download a custom version of pluto, build it, and install it.
+
 	git clone https://github.com/hoelzro/pluto.git pluto
 	cd pluto
 	make macosx
 	sudo mv pluto.dylib pluto.so
 	sudo cp pluto.so "/usr/lib/lua/5.1/"
 	cd ..
+
 6. Download and run the weaver engine
+
 	git clone git://github.com/nathanaeljones/weaver-lua.git weaver
 	cd weaver
 	cd web
