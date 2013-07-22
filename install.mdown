@@ -14,6 +14,28 @@ These dependencies are installed below, and are just here for reference
 * Custom version of pluto, https://github.com/hoelzro/pluto.git
 
 
+## Installing with Homebrew
+
+	homebrew install lua luarocks
+	
+	brew sh
+	
+	luarocks install wsapi-xavante
+	luarocks install luafilesystem
+	luarocks install markdown
+	luarocks install orbit
+	luarocks install penlight
+	
+	brew list lua #Make sure it's 5.1.x, otherwise you'll have to reinstall. 
+	
+	git clone https://github.com/hoelzro/pluto.git pluto
+	cd pluto
+	make macosx
+	sudo mv pluto.dylib pluto.so
+	sudo cp pluto.so "/usr/local/Cellar/lua/5.1.5/"
+	cd ..
+
+
 ## Installing on OS X
 
 1. Download and install Lua
