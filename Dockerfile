@@ -75,9 +75,12 @@ RUN git clone git://github.com/nathanaeljones/weaver-lua.git weaver
 RUN chmod 777 weaver/web/server.sh
 
 #Run weaver-lua
-CMD /home/downloads/weaver/web/server.sh
 
+EXPOSE 8080
 
+WORKDIR /home/downloads/weaver/web/
+
+ENTRYPOINT  ["/home/downloads/weaver/web/server.sh"]
 
 
 
