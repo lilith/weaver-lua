@@ -8,8 +8,7 @@ RUN apt-get -y install make gcc libreadline6 libreadline6-dev libtool wget curl 
 RUN wget http://www.lua.org/ftp/lua-5.1.5.tar.gz
 RUN tar xzvf lua-5.1.5.tar.gz
 RUN cd lua-5.1.5
-RUN make linux
-RUN make test install
+RUN make install
 
 RUN cd /home/downloads
 
