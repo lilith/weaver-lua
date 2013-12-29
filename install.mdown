@@ -87,11 +87,12 @@ These dependencies are installed below, and are just here for reference
 
 
 
-	sudo yum -y install make gcc libreadline6 libreadline6-dev lua lua-devel libtool
+	sudo yum -y install make gcc libreadline6 libreadline6-dev lua lua-devel libtool luarocks
+	
 
-	wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz
-	tar zxf luarocks-2.0.5.tar.gz
-	cd luarocks-2.0.5
+	wget http://luarocks.org/releases/luarocks-2.1.1.tar.gz
+	tar zxf luarocks-2.1.1.tar.gz
+	cd luarocks-2.1.1
 	sudo ./configure
 	make
 	sudo make install
@@ -104,6 +105,7 @@ These dependencies are installed below, and are just here for reference
 	sudo /usr/local/bin/luarocks install markdown
 	sudo /usr/local/bin/luarocks install orbit
 	sudo /usr/local/bin/luarocks install penlight
+	sudo /usr/local/bin/luarocks install wsapi
 
 	sudo yum -y install git
 
