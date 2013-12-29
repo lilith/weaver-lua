@@ -38,7 +38,7 @@ RUN make install
 WORKDIR /home/downloads
 
 #Install the packages with no dependencies first, so the wrong versions don't get installed
-RUN luarocks install sha2 0.2.0-1
+#RUN luarocks install sha2 0.2.0-1
 RUN luarocks install coxpcall 1.13.0-1
 RUN luarocks install luasocket 2.0.2-5
 RUN luarocks install lpeg 0.12-1
