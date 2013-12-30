@@ -67,6 +67,7 @@ RUN chmod 777 weaver/web/server.sh
 
 #Run weaver-lua
 
+EXPOSE 80
 EXPOSE 8080
 
 WORKDIR /home/downloads/weaver/web/
