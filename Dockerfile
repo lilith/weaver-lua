@@ -36,7 +36,7 @@ RUN luarocks install luasocket 2.0.2-5
 RUN luarocks install lpeg 0.12-1
 RUN luarocks install luafilesystem 1.5.0-2
 RUN luarocks install rings 1.2.3-2
-RUN luarocks install sha2 0.2.0-1
+RUN echo "y" | luarocks install sha2 0.2.0-1
 
 #Install the 2nd level packages next
 RUN luarocks install copas 1.1.6-1
