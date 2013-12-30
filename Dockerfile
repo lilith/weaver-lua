@@ -10,21 +10,17 @@ WORKDIR /home/downloads
 RUN apt-get update && apt-get -y install make gcc libreadline6 libreadline6-dev libtool wget curl unzip libncurses5-dev git build-essential && apt-get clean
 
 #Download and unpack lua source
-WORKDIR /home/downloads
-RUN wget http://www.lua.org/ftp/lua-5.1.5.tar.gz && tar xzvf lua-5.1.5.tar.gz
+RUN cd /home/downloads && wget http://www.lua.org/ftp/lua-5.1.5.tar.gz && tar xzvf lua-5.1.5.tar.gz
 
 #Build and install lua from source
-WORKDIR /home/downloads/lua-5.1.5
-RUN make linux && make test && make install
+RUN cd /home/downloads/lua-5.1.5 && make linux && make test && make install
 
 # luarocks 2.1.1 was horrible, use 2.0.5
 #Download an unpack luarocks source
-WORKDIR /home/downloads
-RUN wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz && tar xzvf luarocks-2.0.5.tar.gz
+RUN cd /home/downloads && wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz && tar xzvf luarocks-2.0.5.tar.gz
 
 #Build and install luarocks from source
-WORKDIR /home/downloads/luarocks-2.0.5
-RUN ./configure && make install
+RUN cd /home/downloads/luarocks-2.0.5 && ./configure && make install
 
 #Install packages with luarocks. Update to include any dependencies not explictly listed.
 #Lua rocks don't tend to have accurate depenency specifiers.
@@ -52,25 +48,22 @@ RUN luarocks install orbit 2.2.0-2
 
 
 #Clone custom version of Pluto - Update if changed, tied to commit
-WORKDIR /home/downloads
-RUN git clone https://github.com/nathanaeljones/pluto.git pluto
-WORKDIR /home/downloads/pluto
-RUN git checkout 10bced6bdb5faba530efef71e2891446a7f9e2b4
+RUN cd /home/downloads && git clone https://github.com/nathanaeljones/pluto.git pluto && cd pluto && git checkout 10bced6bdb5faba530efef71e2891446a7f9e2b4
 
 #Build and install Pluto
-RUN make linux && cp pluto.so "/usr/local/lib/lua/5.1"
+RUN cd /home/downloads/pluto && make linux && cp pluto.so "/usr/local/lib/lua/5.1"
 
 #Clone weaver-lua
-WORKDIR /home/downloads
-RUN git clone git://github.com/nathanaeljones/weaver-lua.git weaver
-RUN chmod 777 weaver/web/server.sh
-
-#Run weaver-lua
+RUN cd /home/downloads && git clone git://github.com/nathanaeljones/weaver-lua.git weaver
+RUN chmod 777 /home/downloads/weaver/web/server.sh
 
 EXPOSE 80
 EXPOSE 8080
 
 WORKDIR /home/downloads/weaver/web/
+
+
+#Run weaver-lua
 
 CMD  ["/bin/bash", "/home/downloads/weaver/web/server.sh"]
 
