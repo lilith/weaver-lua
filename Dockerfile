@@ -7,31 +7,24 @@ RUN mkdir -p /home/downloads
 WORKDIR /home/downloads
 
 #Install git, plus all download / compiler tools needed.
-RUN apt-get update
-RUN apt-get -y install make gcc libreadline6 libreadline6-dev libtool wget curl unzip libncurses5-dev git build-essential
+RUN apt-get update && apt-get -y install make gcc libreadline6 libreadline6-dev libtool wget curl unzip libncurses5-dev git build-essential && apt-get clean
 
 #Download and unpack lua source
 WORKDIR /home/downloads
-RUN wget http://www.lua.org/ftp/lua-5.1.5.tar.gz
-RUN tar xzvf lua-5.1.5.tar.gz
+RUN wget http://www.lua.org/ftp/lua-5.1.5.tar.gz && tar xzvf lua-5.1.5.tar.gz
 
 #Build and install lua from source
 WORKDIR /home/downloads/lua-5.1.5
-RUN make linux
-RUN make test
-RUN make install
+RUN make linux && make test && make install
 
 # luarocks 2.1.1 was horrible, use 2.0.5
-
 #Download an unpack luarocks source
 WORKDIR /home/downloads
-RUN wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz
-RUN tar xzvf luarocks-2.0.5.tar.gz
+RUN wget http://luarocks.org/releases/luarocks-2.0.5.tar.gz && tar xzvf luarocks-2.0.5.tar.gz
 
 #Build and install luarocks from source
 WORKDIR /home/downloads/luarocks-2.0.5
-RUN ./configure
-RUN make install
+RUN ./configure && make install
 
 #Install packages with luarocks. Update to include any dependencies not explictly listed.
 #Lua rocks don't tend to have accurate depenency specifiers.
@@ -39,7 +32,7 @@ WORKDIR /home/downloads
 
 #Install the packages with no dependencies first, so the wrong versions don't get installed
 #RUN luarocks install sha2 0.2.0-1
-RUN luarocks install coxpcall 1.13.0-1
+RUN luarocks install coxpcall 1.13.0-1 
 RUN luarocks install luasocket 2.0.2-5
 RUN luarocks install lpeg 0.12-1
 RUN luarocks install luafilesystem 1.5.0-2
@@ -65,9 +58,7 @@ WORKDIR /home/downloads/pluto
 RUN git checkout 10bced6bdb5faba530efef71e2891446a7f9e2b4
 
 #Build and install Pluto
-RUN make linux
-RUN cp pluto.so "/usr/local/lib/lua/5.1"
-
+RUN make linux && cp pluto.so "/usr/local/lib/lua/5.1"
 
 #Clone weaver-lua
 WORKDIR /home/downloads
