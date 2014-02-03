@@ -8,7 +8,8 @@ function center()
 		"market", 
 		"world.house.outside",
         "world.test.rabbithole.rabbithole",
-		"world.forest.entrance"
+		"world.forest.entrance",
+		"world.icerealm.chasm.snowdunes"
  	})
 	
 end
